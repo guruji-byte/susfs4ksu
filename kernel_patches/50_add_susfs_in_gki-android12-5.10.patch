@@ -1,5 +1,5 @@
 diff --git a/fs/Makefile b/fs/Makefile
-index e4adb988218c..06e7ab304425 100644
+index c7851875b668..bb53b87308d6 100644
 --- a/fs/Makefile
 +++ b/fs/Makefile
 @@ -18,6 +18,9 @@ obj-y :=	open.o read_write.o file_table.o super.o \
@@ -10,17 +10,16 @@ index e4adb988218c..06e7ab304425 100644
 +obj-$(CONFIG_KSU_SUSFS_SUS_SU) += sus_su.o
 +
  ifeq ($(CONFIG_BLOCK),y)
- obj-y +=	buffer.o direct-io.o mpage.o
+ obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 75897359b754..ca40776a1678 100644
+index dd74ce596fd7..9e8ed63f157b 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -2343,6 +2343,12 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
+@@ -2308,6 +2308,11 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
  				continue;
  			if (dentry_cmp(dentry, str, hashlen_len(hashlen)) != 0)
  				continue;
-+
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
 +				continue;
@@ -29,7 +28,7 @@ index 75897359b754..ca40776a1678 100644
  		}
  		*seqp = seq;
  		return dentry;
-@@ -2426,6 +2432,12 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
+@@ -2391,6 +2396,12 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
  		if (dentry->d_name.hash != hash)
  			continue;
  
@@ -72,22 +71,22 @@ index 4f25015aa534..2938aa2a808e 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/inode.c b/fs/inode.c
-index dc3c911d4b92..5103272153be 100644
+index ca0dbce6d0a4..166d0f7f2505 100644
 --- a/fs/inode.c
 +++ b/fs/inode.c
-@@ -1797,6 +1797,11 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
- {
- 	int dirty_flags = 0;
+@@ -1790,6 +1790,11 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
+ 	int iflags = I_DIRTY_TIME;
+ 	bool dirty = false;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +	if (unlikely(inode->i_state & 67108864)) {
 +		return 0;
 +	}
 +#endif
- 	if (flags & (S_ATIME | S_CTIME | S_MTIME)) {
- 		if (flags & S_ATIME)
- 			inode->i_atime = *time;
-@@ -1825,6 +1830,11 @@ EXPORT_SYMBOL(generic_update_time);
+ 	if (flags & S_ATIME)
+ 		inode->i_atime = *time;
+ 	if (flags & S_VERSION)
+@@ -1815,6 +1820,11 @@ EXPORT_SYMBOL(generic_update_time);
   */
  int inode_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
@@ -100,23 +99,22 @@ index dc3c911d4b92..5103272153be 100644
  		return inode->i_op->update_time(inode, time, flags);
  	return generic_update_time(inode, time, flags);
 diff --git a/fs/namei.c b/fs/namei.c
-index a3922d96fac9..27a2c8092878 100644
+index 8cea84ecbf56..f2c0f323ced5 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
-@@ -1047,6 +1047,12 @@ static inline int may_follow_link(struct nameidata *nd, const struct inode *inod
- 	struct user_namespace *mnt_userns;
- 	kuid_t i_uid;
- 
+@@ -1048,6 +1048,11 @@ int sysctl_protected_regular __read_mostly;
+  */
+ static inline int may_follow_link(struct nameidata *nd, const struct inode *inode)
+ {
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (nd->inode && unlikely(nd->inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
 +		return -ENOENT;
 +	}
 +#endif
-+
  	if (!sysctl_protected_symlinks)
  		return 0;
  
-@@ -1132,6 +1138,12 @@ int may_linkat(struct user_namespace *mnt_userns, struct path *link)
+@@ -1122,6 +1127,12 @@ int may_linkat(struct path *link)
  {
  	struct inode *inode = link->dentry->d_inode;
  
@@ -127,12 +125,12 @@ index a3922d96fac9..27a2c8092878 100644
 +#endif
 +
  	/* Inode writeback is not safe when the uid or gid are invalid. */
- 	if (!uid_valid(i_uid_into_mnt(mnt_userns, inode)) ||
- 	    !gid_valid(i_gid_into_mnt(mnt_userns, inode)))
-@@ -1184,6 +1196,12 @@ static int may_create_in_sticky(struct user_namespace *mnt_userns,
- 	umode_t dir_mode = nd->dir_mode;
- 	kuid_t dir_uid = nd->dir_uid;
- 
+ 	if (!uid_valid(inode->i_uid) || !gid_valid(inode->i_gid))
+ 		return -EOVERFLOW;
+@@ -1163,6 +1174,12 @@ int may_linkat(struct path *link)
+ static int may_create_in_sticky(umode_t dir_mode, kuid_t dir_uid,
+ 				struct inode * const inode)
+ {
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (unlikely(inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
 +		return -ENOENT;
@@ -142,7 +140,7 @@ index a3922d96fac9..27a2c8092878 100644
  	if ((!sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
  	    (!sysctl_protected_regular && S_ISREG(inode->i_mode)) ||
  	    likely(!(dir_mode & S_ISVTX)) ||
-@@ -1548,6 +1566,9 @@ struct dentry *lookup_one_qstr_excl(const struct qstr *name,
+@@ -1526,6 +1543,9 @@ static struct dentry *__lookup_hash(const struct qstr *name,
  	struct dentry *dentry = lookup_dcache(name, base, flags);
  	struct dentry *old;
  	struct inode *dir = base->d_inode;
@@ -152,14 +150,14 @@ index a3922d96fac9..27a2c8092878 100644
  
  	if (dentry)
  		return dentry;
-@@ -1565,6 +1586,21 @@ struct dentry *lookup_one_qstr_excl(const struct qstr *name,
+@@ -1543,6 +1563,21 @@ static struct dentry *__lookup_hash(const struct qstr *name,
  		dput(dentry);
  		dentry = old;
  	}
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
 +		if ((flags & (LOOKUP_CREATE | LOOKUP_EXCL))) {
-+			error = inode_permission(dir->i_sb->s_user_ns, dir, MAY_WRITE | MAY_EXEC);
++			error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
 +			if (error) {
 +				dput(dentry);
 +				return ERR_PTR(error);
@@ -173,8 +171,8 @@ index a3922d96fac9..27a2c8092878 100644
 +#endif
  	return dentry;
  }
- EXPORT_SYMBOL(lookup_one_qstr_excl);
-@@ -1667,6 +1703,12 @@ static struct dentry *__lookup_slow(const struct qstr *name,
+ 
+@@ -1644,6 +1679,12 @@ static struct dentry *__lookup_slow(const struct qstr *name,
  			dentry = old;
  		}
  	}
@@ -187,7 +185,7 @@ index a3922d96fac9..27a2c8092878 100644
  	return dentry;
  }
  
-@@ -2317,6 +2359,12 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2289,6 +2330,12 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  			}
  			return -ENOTDIR;
  		}
@@ -200,19 +198,20 @@ index a3922d96fac9..27a2c8092878 100644
  	}
  }
  
-@@ -2491,6 +2539,11 @@ int filename_lookup(int dfd, struct filename *name, unsigned flags,
+@@ -2467,6 +2514,12 @@ int filename_lookup(int dfd, struct filename *name, unsigned flags,
  		audit_inode(name, path->dentry,
  			    flags & LOOKUP_MOUNTPOINT ? AUDIT_INODE_NOEVAL : 0);
  	restore_nameidata();
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (!retval && path->dentry->d_inode && unlikely(path->dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
++		putname(name);
 +		return -ENOENT;
 +	}
 +#endif
+ 	putname(name);
  	return retval;
  }
- 
-@@ -2945,6 +2998,12 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
+@@ -2797,6 +2850,12 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
  	if (IS_APPEND(dir))
  		return -EPERM;
  
@@ -222,32 +221,31 @@ index a3922d96fac9..27a2c8092878 100644
 +	}
 +#endif
 +
- 	if (check_sticky(mnt_userns, dir, inode) || IS_APPEND(inode) ||
- 	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode) ||
- 	    HAS_UNMAPPED_ID(mnt_userns, inode))
-@@ -2975,7 +3034,21 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
- static inline int may_create(struct user_namespace *mnt_userns,
- 			     struct inode *dir, struct dentry *child)
+ 	if (check_sticky(dir, inode) || IS_APPEND(inode) ||
+ 	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode) || HAS_UNMAPPED_ID(inode))
+ 		return -EPERM;
+@@ -2825,8 +2884,20 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
+  */
+ static inline int may_create(struct inode *dir, struct dentry *child)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	int error;
 +#endif
+ 	struct user_namespace *s_user_ns;
  	audit_inode_child(dir, child, AUDIT_TYPE_CHILD_CREATE);
-+
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (child->d_inode && unlikely(child->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
-+		error = inode_permission(mnt_userns, dir, MAY_WRITE | MAY_EXEC);
++		error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
 +		if (error) {
 +			return error;
 +		}
 +		return -ENOENT;
 +	}
 +#endif
-+
  	if (child->d_inode)
  		return -EEXIST;
  	if (IS_DEADDIR(dir))
-@@ -3203,6 +3276,12 @@ static int may_open(struct user_namespace *mnt_userns, const struct path *path,
+@@ -2990,6 +3061,12 @@ static int may_open(const struct path *path, int acc_mode, int flag)
  	if (!inode)
  		return -ENOENT;
  
@@ -260,16 +258,15 @@ index a3922d96fac9..27a2c8092878 100644
  	switch (inode->i_mode & S_IFMT) {
  	case S_IFLNK:
  		return -ELOOP;
-@@ -3281,7 +3360,21 @@ static int may_o_create(struct user_namespace *mnt_userns,
- 			const struct path *dir, struct dentry *dentry,
- 			umode_t mode)
+@@ -3069,7 +3146,20 @@ static inline int open_to_namei_flags(int flag)
+ static int may_o_create(const struct path *dir, struct dentry *dentry, umode_t mode)
  {
+ 	struct user_namespace *s_user_ns;
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	int error;
 +
 +	if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved1 & 16777216)) {
-+		error = inode_permission(mnt_userns, dir->dentry->d_inode,
-+				 MAY_WRITE | MAY_EXEC);
++		error = inode_permission(dir->dentry->d_inode, MAY_WRITE | MAY_EXEC);
 +		if (error) {
 +			return error;
 +		}
@@ -282,7 +279,7 @@ index a3922d96fac9..27a2c8092878 100644
  	if (error)
  		return error;
  
-@@ -3402,6 +3495,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3190,6 +3280,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  	}
  	if (dentry->d_inode) {
  		/* Cached positive dentry: will open in f_op->open */
@@ -295,7 +292,7 @@ index a3922d96fac9..27a2c8092878 100644
  		return dentry;
  	}
  
-@@ -3433,6 +3532,16 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3219,6 +3315,16 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  		dentry = atomic_open(nd, dentry, file, open_flag, mode);
  		if (unlikely(create_error) && dentry == ERR_PTR(-ENOENT))
  			dentry = ERR_PTR(create_error);
@@ -312,7 +309,7 @@ index a3922d96fac9..27a2c8092878 100644
  		return dentry;
  	}
  
-@@ -3447,6 +3556,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3233,6 +3339,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  			}
  			dput(dentry);
  			dentry = res;
@@ -326,17 +323,17 @@ index a3922d96fac9..27a2c8092878 100644
  	}
  
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..2208394241e2 100644
+index 5d5a426aa495..a521b6ba1704 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
-@@ -988,6 +988,14 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
- 	if (!initial_idmapping(fs_userns))
- 		mnt->mnt.mnt_userns = get_user_ns(fs_userns);
+@@ -966,6 +966,14 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+ 	mnt->mnt_mountpoint	= mnt->mnt.mnt_root;
+ 	mnt->mnt_parent		= mnt;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// here we reorder the mounts that are added after copy_mnt_ns();
-+	if (fs_userns->android_kabi_reserved1 & 8) {
-+		mnt->mnt.android_kabi_reserved1 = fs_userns->android_kabi_reserved2++;
++	if (mnt->mnt.mnt_sb->s_user_ns->android_kabi_reserved1 & 8) {
++		mnt->mnt.android_kabi_reserved1 = mnt->mnt.mnt_sb->s_user_ns->android_kabi_reserved2++;
 +	}
 +	// Seems no need to reorder the mnt group id for mounts after copy_mnt_ns();
 +#endif
@@ -344,22 +341,23 @@ index 2bef741f2092..2208394241e2 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
  	unlock_mount_hash();
-@@ -1084,6 +1092,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1059,6 +1067,15 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// here we reorder the mounts that are cloned after copy_mnt_ns();
-+	if (mnt->mnt.mnt_userns->android_kabi_reserved1 & 8) {
-+		mnt->mnt.android_kabi_reserved1 = mnt->mnt.mnt_userns->android_kabi_reserved2++;
++	if (mnt->mnt.mnt_sb->s_user_ns->android_kabi_reserved1 & 8) {
++			mnt->mnt.android_kabi_reserved1 = mnt->mnt.mnt_sb->s_user_ns->android_kabi_reserved2++;
 +	}
 +	// Seems no need to reorder the mnt group id for mounts after copy_mnt_ns();
 +#endif
++
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -3006,6 +3022,13 @@ static int do_new_mount(struct path *path, const char *fstype, int sb_flags,
+@@ -2911,6 +2928,14 @@ static int do_new_mount(struct path *path, const char *fstype, int sb_flags,
  	if (!err)
  		err = do_new_mount_fc(fc, path, mnt_flags);
  
@@ -370,10 +368,11 @@ index 2bef741f2092..2208394241e2 100644
 +		}
 +	}
 +#endif
++
  	put_fs_context(fc);
  	return err;
  }
-@@ -3423,6 +3446,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3328,6 +3353,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -385,7 +384,7 @@ index 2bef741f2092..2208394241e2 100644
  
  	BUG_ON(!ns);
  
-@@ -3483,6 +3511,36 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3388,6 +3418,36 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -393,8 +392,8 @@ index 2bef741f2092..2208394241e2 100644
 +	// q->mnt.android_kabi_reserved1 -> fake mnt id
 +	// q->mnt.android_kabi_reserved2 -> fake mnt group id (peer id)
 +	// new_ns->user_ns->android_kabi_reserved1 -> mnt ns flag for sus_mount
-+	// new_ns->user_ns->android_kabi_reserved2 -> to record last valid fake mnt id, \
-+	//    for the use of app process adding/cloning new mounts after its namespace is cloned by zygote
++	// new_ns->user_ns->android_kabi_reserved2 -> to record last valid fake mnt id,
++	//     for the use of app process adding/cloning new mounts after its namespace is cloned by zygote
 +
 +	// Here We are only interested in processes of which original mnt namespace belongs to zygote 
 +	// Also we just make use of existing 'p' and 'q' mount pointer, no need to delcare extra mount pointer
@@ -414,8 +413,8 @@ index 2bef741f2092..2208394241e2 100644
 +			}
 +		}
 +	}
-+	// lastly we set the flag NS_IS_COPY_MNT_NS_DONE and assign the last fake mnt id to \
-+	// new_ns->user_ns->android_kabi_reserved2 for later use
++	// lastly we set the flag NS_IS_COPY_MNT_NS_DONE and assign the last fake mnt id to
++	//     new_ns->user_ns->android_kabi_reserved2 for later use
 +	new_ns->user_ns->android_kabi_reserved1 |= 8;
 +	new_ns->user_ns->android_kabi_reserved2 = first_entry_mnt_id;
 +#endif
@@ -423,10 +422,10 @@ index 2bef741f2092..2208394241e2 100644
  
  	if (rootmnt)
 diff --git a/fs/overlayfs/inode.c b/fs/overlayfs/inode.c
-index de80b0d8cf2a..6f2509550231 100644
+index df35954d73d2..f784def63476 100644
 --- a/fs/overlayfs/inode.c
 +++ b/fs/overlayfs/inode.c
-@@ -165,6 +165,21 @@ int ovl_getattr(struct user_namespace *mnt_userns, const struct path *path,
+@@ -168,6 +168,15 @@ int ovl_getattr(const struct path *path, struct kstat *stat,
  
  	metacopy_blocks = ovl_is_metacopy_dentry(dentry);
  
@@ -435,12 +434,6 @@ index de80b0d8cf2a..6f2509550231 100644
 +	if (likely(realpath.mnt && realpath.dentry)) {
 +		old_cred = ovl_override_creds(dentry->d_sb);
 +		err = vfs_getattr(&realpath, stat, request_mask, flags);
-+		if (err)
-+			goto out;
-+		
-+		if (realpath.dentry->d_inode) {
-+			generic_fill_statx_attr(realpath.dentry->d_inode, stat);
-+		}
 +		goto out;
 +	}
 +#endif
@@ -449,10 +442,10 @@ index de80b0d8cf2a..6f2509550231 100644
  	old_cred = ovl_override_creds(dentry->d_sb);
  	err = vfs_getattr(&realpath, stat, request_mask, flags);
 diff --git a/fs/overlayfs/readdir.c b/fs/overlayfs/readdir.c
-index c6038e6ad753..b0047fb60129 100644
+index 5a35f87dd66f..2688730b168a 100644
 --- a/fs/overlayfs/readdir.c
 +++ b/fs/overlayfs/readdir.c
-@@ -935,7 +935,19 @@ static int ovl_dir_open(struct inode *inode, struct file *file)
+@@ -930,7 +930,19 @@ static int ovl_dir_open(struct inode *inode, struct file *file)
  	if (!od)
  		return -ENOMEM;
  
@@ -473,10 +466,10 @@ index c6038e6ad753..b0047fb60129 100644
  	if (IS_ERR(realfile)) {
  		kfree(od);
 diff --git a/fs/overlayfs/super.c b/fs/overlayfs/super.c
-index fb86a93e2571..b20aae797a14 100644
+index d59624b439f9..0622a660b0c6 100644
 --- a/fs/overlayfs/super.c
 +++ b/fs/overlayfs/super.c
-@@ -325,6 +325,18 @@ static int ovl_statfs(struct dentry *dentry, struct kstatfs *buf)
+@@ -324,6 +324,18 @@ static int ovl_statfs(struct dentry *dentry, struct kstatfs *buf)
  	struct path path;
  	int err;
  
@@ -496,10 +489,10 @@ index fb86a93e2571..b20aae797a14 100644
  
  	err = vfs_statfs(&path, buf);
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index e429aadc359a..54fb51c4f00a 100644
+index d92d1ee75930..ae3fb566294c 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -283,8 +283,18 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+@@ -332,8 +332,18 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
@@ -519,10 +512,10 @@ index e429aadc359a..54fb51c4f00a 100644
  	}
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 49650e54d2f8..96aa6e973175 100644
+index eafb75755fa3..43923d4d8cbe 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
-@@ -106,6 +106,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
+@@ -103,6 +103,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
@@ -534,7 +527,7 @@ index 49650e54d2f8..96aa6e973175 100644
  	if (sb->s_op->show_devname) {
  		err = sb->s_op->show_devname(m, mnt_path.dentry);
  		if (err)
-@@ -140,8 +145,20 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
+@@ -137,8 +142,20 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
  	struct path mnt_path = { .dentry = mnt->mnt_root, .mnt = mnt };
  	int err;
  
@@ -555,7 +548,7 @@ index 49650e54d2f8..96aa6e973175 100644
  	if (sb->s_op->show_path) {
  		err = sb->s_op->show_path(m, mnt->mnt_root);
  		if (err)
-@@ -163,11 +180,23 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
+@@ -160,11 +177,23 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
  	if (IS_MNT_SHARED(r))
  		seq_printf(m, " shared:%i", r->mnt_group_id);
  	if (IS_MNT_SLAVE(r)) {
@@ -579,7 +572,7 @@ index 49650e54d2f8..96aa6e973175 100644
  	}
  	if (IS_MNT_UNBINDABLE(r))
  		seq_puts(m, " unbindable");
-@@ -202,6 +231,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
+@@ -199,6 +228,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
@@ -619,12 +612,12 @@ index 09e8ed7d4161..8ef19c8c2537 100644
  	if (unlikely(buf->error))
  		return buf->error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 3e5be67027ef..b7cff22ed2ad 100644
+index c6a2e10983f8..14df3e98f8bf 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -43,6 +43,24 @@
- void generic_fillattr(struct user_namespace *mnt_userns, struct inode *inode,
- 		      struct kstat *stat)
+@@ -35,6 +35,24 @@
+  */
+ void generic_fillattr(struct inode *inode, struct kstat *stat)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +	if (unlikely(inode->i_state & 67108864)) {
@@ -632,8 +625,8 @@ index 3e5be67027ef..b7cff22ed2ad 100644
 +		stat->ino = inode->android_kabi_reserved1;
 +		stat->mode = inode->i_mode;
 +		stat->nlink = inode->i_sb->android_kabi_reserved1;
-+		stat->uid = i_uid_into_mnt(mnt_userns, inode);
-+		stat->gid = i_gid_into_mnt(mnt_userns, inode);
++		stat->uid = inode->i_uid;
++		stat->gid = inode->i_gid;
 +		stat->rdev = inode->i_rdev;
 +		stat->size = inode->i_sb->android_kabi_reserved2;
 +		stat->atime = inode->i_atime;
@@ -648,7 +641,7 @@ index 3e5be67027ef..b7cff22ed2ad 100644
  	stat->ino = inode->i_ino;
  	stat->mode = inode->i_mode;
 diff --git a/fs/statfs.c b/fs/statfs.c
-index 96d1c3edf289..277f66d7bcf3 100644
+index d42b44dc0e49..553f995a04a1 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -109,6 +109,22 @@ int user_statfs(const char __user *pathname, struct kstatfs *st)
@@ -688,10 +681,10 @@ index 96d1c3edf289..277f66d7bcf3 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 4b2ebf822f00..c8f802d1a32b 100644
+index 1de01fab5788..6f45aadfc559 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
-@@ -77,6 +77,10 @@
+@@ -78,6 +78,10 @@
  
  #include <trace/hooks/sys.h>
  
@@ -702,7 +695,7 @@ index 4b2ebf822f00..c8f802d1a32b 100644
  #ifndef SET_UNALIGN_CTL
  # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
  #endif
-@@ -1302,7 +1306,14 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
+@@ -1276,7 +1280,14 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
  	struct new_utsname tmp;
  
  	down_read(&uts_sem);
