@@ -71,28 +71,31 @@
 - See `$KernelSU_repo/kernel/Kconfig` for supported features after applying the susfs patches.
 
 ## Other Building Tips ##
-1. To only remove the `-dirty` string from kernel release string, open file `$KERNEL_ROOT/scripts/setlocalversion`, then look for all the lines that containing `printf '%s' -dirty`, and replace it with `printf '%s' ''`
-2. Alternatively, If you want to directly hardcode the whole kernel release string, then open file `$KERNEL_ROOT/scripts/setlocalversion`, look for the last line `echo "$res"`, and for example, replace it with `echo "-android13-01-gb123456789012-ab12345678"`
-3. To hardcore your kernel version string, open `$KERNEL_ROOT/scripts/mkcompile_h`, and look for line `UTS_VERSION="$(echo $UTS_VERSION $CONFIG_FLAGS $TIMESTAMP | cut -b -$UTS_LEN)"`, then for example, replace it with `UTS_VERSION="#1 SMP PREEMPT Mon Jan 1 18:00:00 UTC 2024"`
-4. To spoof the `/proc/config.gz` with the stock config, 
+- To only remove the `-dirty` string from kernel release string, open file `$KERNEL_ROOT/scripts/setlocalversion`, then look for all the lines that containing `printf '%s' -dirty`, and replace it with `printf '%s' ''`
+- Alternatively, If you want to directly hardcode the whole kernel release string, then open file `$KERNEL_ROOT/scripts/setlocalversion`, look for the last line `echo "$res"`, and for example, replace it with `echo "-android13-01-gb123456789012-ab12345678"`
+- To hardcode your kernel version string, open `$KERNEL_ROOT/scripts/mkcompile_h`, and look for line `UTS_VERSION="$(echo $UTS_VERSION $CONFIG_FLAGS $TIMESTAMP | cut -b -$UTS_LEN)"`, then for example, replace it with `UTS_VERSION="#1 SMP PREEMPT Mon Jan 1 18:00:00 UTC 2024"`
+- To hardcode your kernel version string which can be seen from /proc/version, open `$KERNEL_ROOT/scripts/mkcompile_h`, then search for variable name `LINUX_COMPILE_BY` and `LINUX_COMPILE_HOST`, then for example, append `LINUX_COMPILE_BY=build-user` and `LINUX_COMPILE_HOST=build-host` after line `UTS_VERSION="$(echo $UTS_VERSION $CONFIG_FLAGS $TIMESTAMP | cut -b -$UTS_LEN)"`
+- To spoof the `/proc/config.gz` with the stock config, 
 
-   - Make sure you are on the stock ROM and using stock kernel.
-   - Use adb shell or root shell to pull your stock `/proc/config.gz` from your device to PC.
-   - Decompress it using `gunzip` or whatever tools, then copy it to `$KERNEL_ROOT/arch/arm64/configs/stock_defconfig`
-   - Open file `$KERNEL_ROOT/kernel/Makefile`.
-   - Look for line `$(obj)/config_data: $(KCONFIG_CONFIG) FORCE`, and replace it with `$(obj)/config_data: arch/arm64/configs/stock_defconfig FORCE`
+   1. Make sure you are on the stock ROM and using stock kernel.
+   2. Use adb shell or root shell to pull your stock `/proc/config.gz` from your device to PC.
+   3. Decompress it using `gunzip` or whatever tools, then copy it to `$KERNEL_ROOT/arch/arm64/configs/stock_defconfig`
+   4. Open file `$KERNEL_ROOT/kernel/Makefile`.
+   5. Look for line `$(obj)/config_data: $(KCONFIG_CONFIG) FORCE`, and replace it with `$(obj)/config_data: arch/arm64/configs/stock_defconfig FORCE`
 
 ## Known Compiler Issues ##
-1. error: use of undeclared identifier 'execve_kp', 'newfstatat_kp', etc..
+- error: use of undeclared identifier 'execve_kp', 'newfstatat_kp', etc..
 
-   - Disable `CONFIG_KSU_SUSFS_SUS_SU` before compiling kernel.
-2. error: no member named 'android_kabi_reservedx' in 'struct yyyyyyyy'
+   1. Disable `CONFIG_KSU_SUSFS_SUS_SU` before compiling kernel.
+- error: no member named 'android_kabi_reservedx' in 'struct yyyyyyyy'
 
-   - Because normally the memeber `u64 android_kabi_reservedx;` doesn't exist in all structs with all kernel version below 4.19, and sometimes it is not guaranteed existed with kernel version >= 4.19 and <= 5.4, and even with GKI kernel, like some of the custom kernels has all of them disabled. So at this point if the susfs patches didn't have them patched for you, then what you need to do is to manually append the member to the end of the corresponding struct definition, it should be `u64 android_kabi_reservedx;` with the last `x` starting from `1`, like `u64 android_kabi_reserved1;`, `u64 android_kabi_reserved2;` and so on. You may also refer to patch from other branches like `kernel-4.14`, `kernel-4.9` of this repo for extra `diff` of the missing kabi members.
+   2. Because normally the memeber `u64 android_kabi_reservedx;` doesn't exist in all structs with all kernel version below 4.19, and sometimes it is not guaranteed existed with kernel version >= 4.19 and <= 5.4, and even with GKI kernel, like some of the custom kernels has all of them disabled. So at this point if the susfs patches didn't have them patched for you, then what you need to do is to manually append the member to the end of the corresponding struct definition, it should be `u64 android_kabi_reservedx;` with the last `x` starting from `1`, like `u64 android_kabi_reserved1;`, `u64 android_kabi_reserved2;` and so on. You may also refer to patch from other branches like `kernel-4.14`, `kernel-4.9` of this repo for extra `diff` of the missing kabi members.
  
 
 ## Other Known Issues ##
-- You tell me, or kindly file an issue, or make a PR.
+- Some of the File Explorer Apps cannot display a files/directory properly when a specific sub path of '/sdcard' or '/storage/emulated/0' is added to sus_path
+    1. Make sure the file explorer app has root allowed by KSU manager, because sus_path is only effective on no root allowed process uid.
+    2. It is strongly NOT recommended adding sub path of '/sdcard' or '/storage/emulated/0' to sus_path, because file explorer app is likely using android API to retrieve the list of files/directory, which means the calling uid will be changed to other system media provider app such as the google provider to execute the file lookup operation, and makes sus_path think that it is not a root allowed process uid so as to prevent them from showing up, unless the app obtains the root access first then use root privilege to list the files/directories without using android API.
 
 ## Credits ##
 - KernelSU: https://github.com/tiann/KernelSU
