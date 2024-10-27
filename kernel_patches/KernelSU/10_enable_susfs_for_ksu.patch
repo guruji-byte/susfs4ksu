@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..f68ddf82 100644
+index 67f177f4..0c824550 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,112 @@ config KSU_DEBUG
@@ -87,7 +87,7 @@ index 67f177f4..f68ddf82 100644
 +    depends on KSU_SUSFS
 +    default y
 +    help
-+      - Spoof the output of /proc/bootconfig with a pre-crafted file.
++      - Spoof the output of /proc/bootconfig with a user-defined file.
 +      - Effective on all processes.
 +
 +config KSU_SUSFS_OPEN_REDIRECT
@@ -95,9 +95,9 @@ index 67f177f4..f68ddf82 100644
 +    depends on KSU_SUSFS
 +    default y
 +    help
-+      - Allow redirecting a target path to be opened with another path.
++      - Allow redirecting a target path to be opened with another user-defined path.
 +      - Effective only on processes with uid < 2000.
-+      - Process with open access to the target and redirected path can be likely detected.
++      - Please be reminded that process with open access to the target and redirected path can be detected.
 +
 +config KSU_SUSFS_SUS_SU
 +    bool "Enable SUS-SU in runtime temporarily (experimental)"
