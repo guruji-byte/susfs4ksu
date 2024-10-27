@@ -1,8 +1,8 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..932a410f 100644
+index 67f177f4..f68ddf82 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -16,4 +16,87 @@ config KSU_DEBUG
+@@ -16,4 +16,112 @@ config KSU_DEBUG
  	help
  	  Enable KernelSU debug mode.
  
@@ -74,6 +74,31 @@ index 67f177f4..932a410f 100644
 +    help
 +      - Allow logging susfs log to kernel, uncheck it to completely disable all susfs log.
 +
++config KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
++    bool "Enable to automatically hide ksu and susfs symbols from /proc/kallsyms"
++    depends on KSU_SUSFS
++    default y
++    help
++      - Automatically hide ksu and susfs symbols from '/proc/kallsyms'.
++      - Effective on all processes.
++
++config KSU_SUSFS_SPOOF_BOOTCONFIG
++    bool "Enable to spoof /proc/bootconfig"
++    depends on KSU_SUSFS
++    default y
++    help
++      - Spoof the output of /proc/bootconfig with a pre-crafted file.
++      - Effective on all processes.
++
++config KSU_SUSFS_OPEN_REDIRECT
++    bool "Enable to redirect a path to be opened with another path (experimental)"
++    depends on KSU_SUSFS
++    default y
++    help
++      - Allow redirecting a target path to be opened with another path.
++      - Effective only on processes with uid < 2000.
++      - Process with open access to the target and redirected path can be likely detected.
++
 +config KSU_SUSFS_SUS_SU
 +    bool "Enable SUS-SU in runtime temporarily (experimental)"
 +    depends on KSU_SUSFS
@@ -91,10 +116,10 @@ index 67f177f4..932a410f 100644
 +
  endmenu
 diff --git a/kernel/Makefile b/kernel/Makefile
-index 9fec3ef3..eb26e170 100644
+index 9fec3ef3..7a6d04ff 100644
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
-@@ -51,4 +51,37 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
+@@ -51,4 +51,46 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
  ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
  ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
  
@@ -123,6 +148,15 @@ index 9fec3ef3..eb26e170 100644
 +ifdef KSU_SUSFS_ENABLE_LOG
 +ccflags-y += -DKSU_SUSFS_ENABLE_LOG
 +endif
++ifdef KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
++ccflags-y += -DKSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
++endif
++ifdef KSU_SUSFS_SPOOF_BOOTCONFIG
++ccflags-y += -DKSU_SUSFS_SPOOF_BOOTCONFIG
++endif
++ifdef KSU_SUSFS_OPEN_REDIRECT
++ccflags-y += -DKSU_SUSFS_OPEN_REDIRECT
++endif
 +ifdef KSU_SUSFS_SUS_SU
 +ccflags-y += -DKSU_SUSFS_SUS_SU
 +endif
@@ -133,7 +167,7 @@ index 9fec3ef3..eb26e170 100644
 +
  # Keep a new line here!! Because someone may append config
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index b63ea0b1..b1bc3a77 100644
+index b63ea0b1..b17a4bf2 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -32,6 +32,13 @@
@@ -170,7 +204,7 @@ index b63ea0b1..b1bc3a77 100644
  static bool ksu_module_mounted = false;
  
  extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
-@@ -371,6 +391,164 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -371,6 +391,200 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -311,6 +345,42 @@ index b63ea0b1..b1bc3a77 100644
 +			return 0;
 +		}
 +#endif //#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
++#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
++		if (arg2 == CMD_SUSFS_SET_BOOTCONFIG) {
++			int error = 0;
++			if (!ksu_access_ok((void __user*)arg3, SUSFS_FAKE_BOOT_CONFIG_SIZE)) {
++				pr_err("susfs: CMD_SUSFS_SET_BOOTCONFIG -> arg3 is not accessible\n");
++				return 0;
++			}
++			if (!ksu_access_ok((void __user*)arg5, sizeof(error))) {
++				pr_err("susfs: CMD_SUSFS_SET_BOOTCONFIG -> arg5 is not accessible\n");
++				return 0;
++			}
++			error = susfs_set_bootconfig((char __user*)arg3);
++			pr_info("susfs: CMD_SUSFS_SET_BOOTCONFIG -> ret: %d\n", error);
++			if (copy_to_user((void __user*)arg5, &error, sizeof(error)))
++				pr_info("susfs: copy_to_user() failed\n");
++			return 0;
++		}
++#endif //#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
++#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
++		if (arg2 == CMD_SUSFS_ADD_OPEN_REDIRECT) {
++			int error = 0;
++			if (!ksu_access_ok((void __user*)arg3, sizeof(struct st_susfs_open_redirect))) {
++				pr_err("susfs: CMD_SUSFS_ADD_OPEN_REDIRECT -> arg3 is not accessible\n");
++				return 0;
++			}
++			if (!ksu_access_ok((void __user*)arg5, sizeof(error))) {
++				pr_err("susfs: CMD_SUSFS_ADD_OPEN_REDIRECT -> arg5 is not accessible\n");
++				return 0;
++			}
++			error = susfs_add_open_redirect((struct st_susfs_open_redirect __user*)arg3);
++			pr_info("susfs: CMD_SUSFS_ADD_OPEN_REDIRECT -> ret: %d\n", error);
++			if (copy_to_user((void __user*)arg5, &error, sizeof(error)))
++				pr_info("susfs: copy_to_user() failed\n");
++			return 0;
++		}
++#endif //#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +		if (arg2 == CMD_SUSFS_SUS_SU) {
 +			int error = 0;
@@ -335,7 +405,7 @@ index b63ea0b1..b1bc3a77 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -453,7 +631,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -453,7 +667,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -347,7 +417,7 @@ index b63ea0b1..b1bc3a77 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -493,6 +675,27 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -493,6 +711,27 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -375,7 +445,7 @@ index b63ea0b1..b1bc3a77 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -502,6 +705,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -502,6 +741,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -388,7 +458,7 @@ index b63ea0b1..b1bc3a77 100644
  
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
-@@ -511,21 +720,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -511,21 +756,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  

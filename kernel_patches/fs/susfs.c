@@ -77,13 +77,13 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 
 	spin_lock(&susfs_spin_lock);
 	hash_for_each_safe(SUS_PATH_HLIST, bkt, tmp_node, tmp_entry, node) {
-        if (!strcmp(tmp_entry->target_pathname, info.target_pathname)) {
+	if (!strcmp(tmp_entry->target_pathname, info.target_pathname)) {
 			hash_del(&tmp_entry->node);
 			kfree(tmp_entry);
 			update_hlist = true;
 			break;
 		}
-    }
+	}
 	spin_unlock(&susfs_spin_lock);
 
 	new_entry = kmalloc(sizeof(struct st_susfs_sus_path_hlist), GFP_KERNEL);
@@ -111,10 +111,10 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 int susfs_sus_ino_for_filldir64(unsigned long ino) {
 	struct st_susfs_sus_path_hlist *entry;
 
-    hash_for_each_possible(SUS_PATH_HLIST, entry, node, ino) {
-        if (entry->target_ino == ino)
-            return 1;
-    }
+	hash_for_each_possible(SUS_PATH_HLIST, entry, node, ino) {
+		if (entry->target_ino == ino)
+			return 1;
+	}
 	return 0;
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
@@ -446,6 +446,137 @@ void susfs_set_log(bool enabled) {
 	}
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
+
+/* spoof_bootconfig */
+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
+char *fake_boot_config = NULL;
+int susfs_set_bootconfig(char* __user user_fake_boot_config) {
+	int res;
+
+	if (!fake_boot_config) {
+		// 4096 is enough I guess
+		fake_boot_config = kmalloc(SUSFS_FAKE_BOOT_CONFIG_SIZE, GFP_KERNEL);
+		if (!fake_boot_config) {
+			SUSFS_LOGE("no enough memory\n");
+			return -ENOMEM;
+		}
+	}
+
+	spin_lock(&susfs_spin_lock);
+	memset(fake_boot_config, 0, SUSFS_FAKE_BOOT_CONFIG_SIZE);
+	res = strncpy_from_user(fake_boot_config, user_fake_boot_config, SUSFS_FAKE_BOOT_CONFIG_SIZE-1);
+	spin_unlock(&susfs_spin_lock);
+
+	if (res > 0) {
+		SUSFS_LOGI("fake_boot_config is set, length of string: %u\n", strlen(fake_boot_config));
+		return 0;
+	}
+	SUSFS_LOGI("failed setting fake_boot_config\n");
+	return res;
+}
+
+int susfs_spoof_bootconfig(struct seq_file *m) {
+	if (fake_boot_config != NULL) {
+		seq_puts(m, fake_boot_config);
+		return 0;
+	}
+	return 1;
+}
+#endif
+
+/* open_redirect */
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+DEFINE_HASHTABLE(OPEN_REDIRECT_HLIST, 10);
+static int susfs_update_open_redirect_inode(struct st_susfs_open_redirect_hlist *new_entry) {
+	struct path path_target;
+	struct inode *inode_target;
+	int err = 0;
+
+	err = kern_path(new_entry->target_pathname, LOOKUP_FOLLOW, &path_target);
+	if (err) {
+		SUSFS_LOGE("Failed opening file '%s'\n", new_entry->target_pathname);
+		return err;
+	}
+
+	inode_target = d_inode(path_target.dentry);
+	if (!inode_target) {
+		SUSFS_LOGE("inode_target is NULL\n");
+		err = 1;
+		goto out_path_put_target;
+	}
+
+	spin_lock(&inode_target->i_lock);
+	inode_target->i_state |= INODE_STATE_OPEN_REDIRECT;
+	spin_unlock(&inode_target->i_lock);
+
+out_path_put_target:
+	path_put(&path_target);
+	return err;
+}
+
+int susfs_add_open_redirect(struct st_susfs_open_redirect* __user user_info) {
+	struct st_susfs_open_redirect info;
+	struct st_susfs_open_redirect_hlist *new_entry, *tmp_entry;
+	struct hlist_node *tmp_node;
+	int bkt;
+	bool update_hlist = false;
+
+	if (copy_from_user(&info, user_info, sizeof(info))) {
+		SUSFS_LOGE("failed copying from userspace\n");
+		return 1;
+	}
+
+	spin_lock(&susfs_spin_lock);
+	hash_for_each_safe(OPEN_REDIRECT_HLIST, bkt, tmp_node, tmp_entry, node) {
+		if (!strcmp(tmp_entry->target_pathname, info.target_pathname)) {
+			hash_del(&tmp_entry->node);
+			kfree(tmp_entry);
+			update_hlist = true;
+			break;
+		}
+	}
+	spin_unlock(&susfs_spin_lock);
+
+	new_entry = kmalloc(sizeof(struct st_susfs_open_redirect_hlist), GFP_KERNEL);
+	if (!new_entry) {
+		SUSFS_LOGE("no enough memory\n");
+		return 1;
+	}
+
+	new_entry->target_ino = info.target_ino;
+	strncpy(new_entry->target_pathname, info.target_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+	strncpy(new_entry->redirected_pathname, info.redirected_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+	if (susfs_update_open_redirect_inode(new_entry)) {
+		SUSFS_LOGE("failed adding path '%s' to OPEN_REDIRECT_HLIST\n", new_entry->target_pathname);
+		kfree(new_entry);
+		return 1;
+	}
+
+	spin_lock(&susfs_spin_lock);
+	hash_add(OPEN_REDIRECT_HLIST, &new_entry->node, info.target_ino);
+	if (update_hlist) {
+		SUSFS_LOGI("target_ino: '%lu', target_pathname: '%s', redirected_pathname: '%s', is successfully updated to OPEN_REDIRECT_HLIST\n",
+				new_entry->target_ino, new_entry->target_pathname, new_entry->redirected_pathname);	
+	} else {
+		SUSFS_LOGI("target_ino: '%lu', target_pathname: '%s' redirected_pathname: '%s', is successfully added to OPEN_REDIRECT_HLIST\n",
+				new_entry->target_ino, new_entry->target_pathname, new_entry->redirected_pathname);
+	}
+	spin_unlock(&susfs_spin_lock);
+	return 0;
+}
+
+struct filename* susfs_get_redirected_path(unsigned long ino) {
+	struct st_susfs_open_redirect_hlist *entry;
+
+	hash_for_each_possible(OPEN_REDIRECT_HLIST, entry, node, ino) {
+		if (entry->target_ino == ino) {
+			SUSFS_LOGI("Redirect for ino: %lu\n", ino);
+			return getname_kernel(entry->redirected_pathname);
+		}
+	}
+	return ERR_PTR(-ENOENT);
+}
+#endif // #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 
 /* sus_su */
 #ifdef CONFIG_KSU_SUSFS_SUS_SU

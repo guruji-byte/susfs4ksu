@@ -95,4 +95,24 @@ cat <<EOF >/dev/null
 ${SUSFS_BIN} set_uname '5.15.137-android14-11-gb572b1fac135-ab11919372' '#1 SMP PREEMPT Mon Jun 3 16:35:10 UTC 2024'
 EOF
 
+#### Redirect path  ####
+# redirect hosts file to other hosts file somewhere else #
+cat <<EOF >/dev/null
+# plesae be reminded that only process with uid < 2000 is effective #
+# and before doing that, make sure you setup proper permission and selinux for your redirected file #
+susfs_clone_perm '/data/local/tmp/my_hosts' '/system/etc/hosts'
+${SUSFS_BIN} add_path_redirect '/system/etc/hosts' '/data/local/tmp/my_hosts'
+EOF
 
+#### Spoof /proc/bootconfig ####
+# No root process detects it for now, and this spoofing won't help much actually #
+cat <<EOF >/dev/null
+FAKE_BOOTCONFIG=${MODDIR}/fake_bootconfig.txt
+cat /proc/bootconfig > ./fake_bootconfig.txt
+sed -i 's/^androidboot.bootreason.*$/androidboot.bootreason = "reboot"/g' ${FAKE_BOOTCONFIG}
+sed -i 's/^androidboot.vbmeta.device_state.*$/androidboot.vbmeta.device_state = "locked"/g' ${FAKE_BOOTCONFIG}
+sed -i 's/^androidboot.verifiedbootstate.*$/androidboot.verifiedbootstate = "green"/g' ${FAKE_BOOTCONFIG}
+sed -i '/androidboot.verifiedbooterror/d' ${FAKE_BOOTCONFIG}
+sed -i '/androidboot.verifyerrorpart/d' ${FAKE_BOOTCONFIG}
+${SUSFS_BIN} set_bootconfig /data/adb/modules/susfs4ksu/fake_bootconfig.txt
+EOF
