@@ -373,23 +373,30 @@ index a3922d96fac9..e44aab41bee5 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..42a0954a8102 100644
+index 2bef741f2092..86ac26b6d216 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
-@@ -36,6 +36,12 @@
+@@ -36,6 +36,19 @@
  #include "pnode.h"
  #include "internal.h"
  
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT) || defined(CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT) || defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT)
 +extern bool is_ksu_domain(void);
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
 +extern int susfs_auto_add_sus_bind_mount(const char *pathname, struct path *path_target);
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 +extern void susfs_auto_add_try_umount_for_bind_mount(struct path *path);
++#endif
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++extern void susfs_auto_add_sus_ksu_default_mount(const char __user *to_pathname);
 +#endif
 +
  /* Maximum number of mounts in a mount namespace */
  unsigned int sysctl_mount_max __read_mostly = 100000;
  
-@@ -988,6 +994,15 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -988,6 +1001,15 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  	if (!initial_idmapping(fs_userns))
  		mnt->mnt.mnt_userns = get_user_ns(fs_userns);
  
@@ -405,7 +412,7 @@ index 2bef741f2092..42a0954a8102 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
  	unlock_mount_hash();
-@@ -1084,6 +1099,22 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1084,6 +1106,22 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
@@ -428,7 +435,7 @@ index 2bef741f2092..42a0954a8102 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -2411,6 +2442,24 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2411,6 +2449,24 @@ static int do_loopback(struct path *path, const char *old_name,
  		umount_tree(mnt, UMOUNT_SYNC);
  		unlock_mount_hash();
  	}
@@ -453,7 +460,7 @@ index 2bef741f2092..42a0954a8102 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3423,6 +3472,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3423,6 +3479,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -465,7 +472,7 @@ index 2bef741f2092..42a0954a8102 100644
  
  	BUG_ON(!ns);
  
-@@ -3483,6 +3537,36 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3483,6 +3544,36 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -502,6 +509,19 @@ index 2bef741f2092..42a0954a8102 100644
  	namespace_unlock();
  
  	if (rootmnt)
+@@ -3777,6 +3868,12 @@ SYSCALL_DEFINE5(move_mount,
+ 	path_put(&to_path);
+ out_from:
+ 	path_put(&from_path);
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++	if (!ret && is_ksu_domain()) {
++		susfs_auto_add_sus_ksu_default_mount(to_pathname);
++	}
++#endif
++
+ 	return ret;
+ }
+ 
 diff --git a/fs/overlayfs/inode.c b/fs/overlayfs/inode.c
 index de80b0d8cf2a..6f2509550231 100644
 --- a/fs/overlayfs/inode.c
