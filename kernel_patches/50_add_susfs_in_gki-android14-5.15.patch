@@ -814,7 +814,7 @@ index 96d1c3edf289..277f66d7bcf3 100644
  }
  
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-index e0d9f77cf2d4..88d641cf81fe 100644
+index e0d9f77cf2d4..e2d41cc3d3ad 100644
 --- a/kernel/kallsyms.c
 +++ b/kernel/kallsyms.c
 @@ -761,8 +761,18 @@ static int s_show(struct seq_file *m, void *p)
@@ -826,7 +826,7 @@ index e0d9f77cf2d4..88d641cf81fe 100644
  			   iter->type, iter->name);
 +#else
 +	{
-+		if (strstr(iter->name, "ksu_") || strstr(iter->name, "susfs_")) {
++		if (strstr(iter->name, "ksu_") || !strncmp(iter->name, "susfs_", 6) || !strncmp(iter->name, "ksud", 4)) {
 +			return 0;
 +		}
 +		seq_printf(m, "%px %c %s\n", value,
