@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..e1e5ee6e 100644
+index 67f177f4..f54b287d 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,139 @@ config KSU_DEBUG
@@ -31,8 +31,8 @@ index 67f177f4..e1e5ee6e 100644
 +    help
 +      - Allow hiding the user-defined mount paths from /proc/self/[mounts|mountinfo|mountstat].
 +      - Effective on all processes for hiding mount entries.
-+      - The mnt_id, parent_mnt_id and mnt_group_id will be reordered as well in mountinfo while the actual values are remained unchanged in kernel,
-+        and this reorder function will be effective on all processes spawned only by the zygote process.
++      - Mounts mounted by process with ksu domain will be forced to be assigned the dev name "KSU",
++        and its mnt_id and mnt_group_id will be assigned much larger to solve the issue of id not being contiguous.  
 +
 +config KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
 +    bool "Enable to hide KSU's default mounts automatically (experimental)"
@@ -617,26 +617,38 @@ index 98fee107..3b636087 100644
  
  void on_post_fs_data(void)
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
-index b4e6eae0..bde27292 100644
+index b4e6eae0..2e25e6c6 100644
 --- a/kernel/selinux/rules.c
 +++ b/kernel/selinux/rules.c
-@@ -122,6 +122,11 @@ void apply_kernelsu_rules()
+@@ -122,6 +122,12 @@ void apply_kernelsu_rules()
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
  
 +#ifdef CONFIG_KSU_SUSFS
 +	// Allow umount in zygote process without installing zygisk
 +	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
++	ksu_set_ksu_sid();
 +#endif
 +
  	rcu_read_unlock();
  }
  
 diff --git a/kernel/selinux/selinux.c b/kernel/selinux/selinux.c
-index 17a25dae..1efc6e62 100644
+index 17a25dae..7a07fc1d 100644
 --- a/kernel/selinux/selinux.c
 +++ b/kernel/selinux/selinux.c
-@@ -116,6 +116,23 @@ bool is_zygote(void *sec)
+@@ -5,6 +5,10 @@
+ 
+ #define KERNEL_SU_DOMAIN "u:r:su:s0"
+ 
++#ifdef CONFIG_KSU_SUSFS
++static u32 ksu_sid = 0;
++#endif
++
+ static int transive_to_domain(const char *domain)
+ {
+ 	struct cred *cred;
+@@ -116,6 +120,37 @@ bool is_zygote(void *sec)
  	return result;
  }
  
@@ -655,16 +667,30 @@ index 17a25dae..1efc6e62 100644
 +u32 ksu_get_current_sid(void) {
 +	return current_sid();
 +}
++
++void ksu_set_ksu_sid(void)
++{
++	int err = security_secctx_to_secid(KERNEL_SU_DOMAIN, strlen(KERNEL_SU_DOMAIN),
++					   &ksu_sid);
++	if (err) {
++		pr_err("failed setting ksu_sid, err: %d\n", err);
++		return;
++	}
++}
++
++bool susfs_is_ksu_domain(void) {
++	return unlikely(current_sid() == ksu_sid);
++}
 +#endif
 +
  #define DEVPTS_DOMAIN "u:object_r:ksu_file:s0"
  
  u32 ksu_get_devpts_sid()
 diff --git a/kernel/selinux/selinux.h b/kernel/selinux/selinux.h
-index 88f1e7d3..51f6374d 100644
+index 88f1e7d3..24291252 100644
 --- a/kernel/selinux/selinux.h
 +++ b/kernel/selinux/selinux.h
-@@ -16,6 +16,12 @@ bool is_zygote(void *cred);
+@@ -16,6 +16,16 @@ bool is_zygote(void *cred);
  
  void apply_kernelsu_rules();
  
@@ -672,6 +698,10 @@ index 88f1e7d3..51f6374d 100644
 +u32 ksu_get_zygote_sid(void);
 +
 +u32 ksu_get_current_sid(void);
++
++void ksu_set_ksu_sid(void);
++
++bool susfs_is_ksu_domain(void);
 +#endif
 +
  u32 ksu_get_devpts_sid();
