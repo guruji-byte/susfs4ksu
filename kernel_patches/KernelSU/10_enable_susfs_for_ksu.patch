@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..f54b287d 100644
+index 67f177f4..67c79d79 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,139 @@ config KSU_DEBUG
@@ -31,8 +31,8 @@ index 67f177f4..f54b287d 100644
 +    help
 +      - Allow hiding the user-defined mount paths from /proc/self/[mounts|mountinfo|mountstat].
 +      - Effective on all processes for hiding mount entries.
-+      - Mounts mounted by process with ksu domain will be forced to be assigned the dev name "KSU",
-+        and its mnt_id and mnt_group_id will be assigned much larger to solve the issue of id not being contiguous.  
++      - Mounts mounted by process with ksu domain will be forced to be assigned the dev name "KSU".
++      - mnt_id and mnt_group_id of the sus mount will be assigned to a much bigger number to solve the issue of id not being contiguous.  
 +
 +config KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
 +    bool "Enable to hide KSU's default mounts automatically (experimental)"
