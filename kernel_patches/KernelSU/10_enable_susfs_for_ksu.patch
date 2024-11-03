@@ -203,7 +203,7 @@ index 9fec3ef3..a3c744aa 100644
 +
  # Keep a new line here!! Because someone may append config
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index b63ea0b1..b17a4bf2 100644
+index b63ea0b1..0c172f8c 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -32,6 +32,13 @@
@@ -234,7 +234,7 @@ index b63ea0b1..b17a4bf2 100644
 +	return ksu_is_allow_uid(current_uid().val);
 +}
 +
-+static u32 zygote_sid = 0;
++extern u32 susfs_zygote_sid;
 +#endif // #ifdef CONFIG_KSU_SUSFS
 +
  static bool ksu_module_mounted = false;
@@ -453,24 +453,14 @@ index b63ea0b1..b17a4bf2 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -493,6 +711,27 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -493,6 +711,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	// check if spawned process is zygote
-+	if (unlikely(new_uid.val == 0 && is_zygote(new->security))) {
-+		zygote_sid = ksu_get_zygote_sid();
-+	}
-+
 +	// check if current process is zygote
-+	bool is_zygote_child = zygote_sid == ksu_get_current_sid();
++	bool is_zygote_child = susfs_is_sid_equal(old->security, susfs_zygote_sid);
 +	if (likely(is_zygote_child)) {
-+		// set flag TASK_STRUCT_KABI1_IS_ZYGOTE to current->android_kabi_reserved1
-+		if (unlikely(!(current->android_kabi_reserved1 & TASK_STRUCT_KABI1_IS_ZYGOTE))) {
-+			current->android_kabi_reserved1 |= TASK_STRUCT_KABI1_IS_ZYGOTE;
-+			pr_info("susfs: Found newly created zygote process\n");
-+		}
 +		// if spawned process is non user app process, run try_umount()
 +		if (unlikely(new_uid.val < 10000 && new_uid.val >= 1000)) {
 +			goto out_try_umount;
@@ -481,7 +471,7 @@ index b63ea0b1..b17a4bf2 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -502,6 +741,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -502,6 +731,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -494,7 +484,7 @@ index b63ea0b1..b17a4bf2 100644
  
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
-@@ -511,21 +756,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -511,21 +746,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
@@ -617,69 +607,121 @@ index 98fee107..3b636087 100644
  
  void on_post_fs_data(void)
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
-index b4e6eae0..2e25e6c6 100644
+index b4e6eae0..d860aac8 100644
 --- a/kernel/selinux/rules.c
 +++ b/kernel/selinux/rules.c
-@@ -122,6 +122,12 @@ void apply_kernelsu_rules()
+@@ -122,6 +122,14 @@ void apply_kernelsu_rules()
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
  
 +#ifdef CONFIG_KSU_SUSFS
 +	// Allow umount in zygote process without installing zygisk
 +	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
-+	ksu_set_ksu_sid();
++	susfs_set_init_sid();
++	susfs_set_ksu_sid();
++	susfs_set_zygote_sid();
 +#endif
 +
  	rcu_read_unlock();
  }
  
 diff --git a/kernel/selinux/selinux.c b/kernel/selinux/selinux.c
-index 17a25dae..7a07fc1d 100644
+index 17a25dae..0254c2e4 100644
 --- a/kernel/selinux/selinux.c
 +++ b/kernel/selinux/selinux.c
-@@ -5,6 +5,10 @@
+@@ -5,6 +5,14 @@
  
  #define KERNEL_SU_DOMAIN "u:r:su:s0"
  
 +#ifdef CONFIG_KSU_SUSFS
-+static u32 ksu_sid = 0;
++#define KERNEL_INIT_DOMAIN "u:r:init:s0"
++#define KERNEL_ZYGOTE_DOMAIN "u:r:zygote:s0"
++u32 susfs_ksu_sid = 0;
++u32 susfs_init_sid = 0;
++u32 susfs_zygote_sid = 0;
 +#endif
 +
  static int transive_to_domain(const char *domain)
  {
  	struct cred *cred;
-@@ -116,6 +120,37 @@ bool is_zygote(void *sec)
+@@ -116,6 +124,83 @@ bool is_zygote(void *sec)
  	return result;
  }
  
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+u32 ksu_get_zygote_sid(void)
++#ifdef CONFIG_KSU_SUSFS
++static inline void susfs_set_sid(const char *secctx_name, u32 *out_sid)
 +{
-+	u32 zygote_sid = 0;
-+	int err = security_secctx_to_secid("u:r:zygote:s0", strlen("u:r:zygote:s0"),
-+					   &zygote_sid);
-+	if (err) {
-+		pr_info("get zygote sid err %d\n", err);
++	int err;
++	
++	if (!secctx_name || !out_sid) {
++		pr_err("secctx_name || out_sid is NULL\n");
++		return;
 +	}
-+	return zygote_sid;
++
++	err = security_secctx_to_secid(secctx_name, strlen(secctx_name),
++					   out_sid);
++	if (err) {
++		pr_err("failed setting sid for '%s', err: %d\n", secctx_name, err);
++		return;
++	}
++	pr_info("sid '%u' is set for secctx_name '%s'\n", *out_sid, secctx_name);
 +}
 +
-+u32 ksu_get_current_sid(void) {
++bool susfs_is_sid_equal(void *sec, u32 sid2) {
++	struct task_security_struct *tsec = (struct task_security_struct *)sec;
++	if (!tsec) {
++		return false;
++	}
++	return tsec->sid == sid2;
++}
++
++u32 susfs_get_sid_from_name(const char *secctx_name)
++{
++	u32 out_sid = 0;
++	int err;
++	
++	if (!secctx_name) {
++		pr_err("secctx_name is NULL\n");
++		return 0;
++	}
++	err = security_secctx_to_secid(secctx_name, strlen(secctx_name),
++					   &out_sid);
++	if (err) {
++		pr_err("failed getting sid from secctx_name: %s, err: %d\n", secctx_name, err);
++		return 0;
++	}
++	return out_sid;
++}
++
++u32 susfs_get_current_sid(void) {
 +	return current_sid();
 +}
 +
-+void ksu_set_ksu_sid(void)
++void susfs_set_zygote_sid(void)
 +{
-+	int err = security_secctx_to_secid(KERNEL_SU_DOMAIN, strlen(KERNEL_SU_DOMAIN),
-+					   &ksu_sid);
-+	if (err) {
-+		pr_err("failed setting ksu_sid, err: %d\n", err);
-+		return;
-+	}
++	susfs_set_sid(KERNEL_ZYGOTE_DOMAIN, &susfs_zygote_sid);
 +}
 +
-+bool susfs_is_ksu_domain(void) {
-+	return unlikely(current_sid() == ksu_sid);
++bool susfs_is_current_zygote_domain(void) {
++	return unlikely(current_sid() == susfs_zygote_sid);
++}
++
++void susfs_set_ksu_sid(void)
++{
++	susfs_set_sid(KERNEL_SU_DOMAIN, &susfs_ksu_sid);
++}
++
++bool susfs_is_current_ksu_domain(void) {
++	return unlikely(current_sid() == susfs_ksu_sid);
++}
++
++void susfs_set_init_sid(void)
++{
++	susfs_set_sid(KERNEL_INIT_DOMAIN, &susfs_init_sid);
++}
++
++bool susfs_is_current_init_domain(void) {
++	return unlikely(current_sid() == susfs_init_sid);
 +}
 +#endif
 +
@@ -687,21 +729,23 @@ index 17a25dae..7a07fc1d 100644
  
  u32 ksu_get_devpts_sid()
 diff --git a/kernel/selinux/selinux.h b/kernel/selinux/selinux.h
-index 88f1e7d3..24291252 100644
+index 88f1e7d3..22d4b324 100644
 --- a/kernel/selinux/selinux.h
 +++ b/kernel/selinux/selinux.h
-@@ -16,6 +16,16 @@ bool is_zygote(void *cred);
+@@ -16,6 +16,18 @@ bool is_zygote(void *cred);
  
  void apply_kernelsu_rules();
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+u32 ksu_get_zygote_sid(void);
-+
-+u32 ksu_get_current_sid(void);
-+
-+void ksu_set_ksu_sid(void);
-+
-+bool susfs_is_ksu_domain(void);
++bool susfs_is_sid_equal(void *sec, u32 sid2);
++u32 susfs_get_sid_from_name(const char *secctx_name);
++u32 susfs_get_current_sid(void);
++void susfs_set_zygote_sid(void);
++bool susfs_is_current_zygote_domain(void);
++void susfs_set_ksu_sid(void);
++bool susfs_is_current_ksu_domain(void);
++void susfs_set_init_sid(void);
++bool susfs_is_current_init_domain(void);
 +#endif
 +
  u32 ksu_get_devpts_sid();

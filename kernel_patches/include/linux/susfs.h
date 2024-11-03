@@ -37,8 +37,6 @@
  * inode->super_block->android_kabi_reserved1 => storing fake i_nlink
  * inode->super_block->android_kabi_reserved2 => storing fake i_size
  * inode->super_block->android_kabi_reserved3 => storing fake i_blocks
- * task_struct->android_kabi_reserved1 => storing flag 'TASK_STRUCT_KABI1_'
- * task_struct->android_kabi_reserved2 => record last valid fake mnt_id to zygote pid
  * user_struct->android_kabi_reserved1 => storing flag 'USER_STRUCT_KABI1_'
  */
 
