@@ -373,7 +373,7 @@ index a3922d96fac9..e44aab41bee5 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..f7c7a87f9ad9 100644
+index 2bef741f2092..b16fb2cc7dcc 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,24 @@
@@ -522,8 +522,8 @@ index 2bef741f2092..f7c7a87f9ad9 100644
 +#endif
 +#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT)
 +		susfs_auto_add_try_umount_for_bind_mount(path);
-+	}
 +#endif
++	}
 +#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT)
 +orig_flow:
 +#endif
