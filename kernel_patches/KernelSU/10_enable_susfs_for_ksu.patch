@@ -203,10 +203,10 @@ index 9fec3ef3..a3c744aa 100644
 +
  # Keep a new line here!! Because someone may append config
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index b63ea0b1..0c172f8c 100644
+index 913867a5..18a98d05 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
-@@ -32,6 +32,13 @@
+@@ -33,6 +33,13 @@
  #include <linux/vmalloc.h>
  #endif
  
@@ -220,7 +220,7 @@ index b63ea0b1..0c172f8c 100644
  #include "allowlist.h"
  #include "arch.h"
  #include "core_hook.h"
-@@ -44,6 +51,19 @@
+@@ -45,6 +52,19 @@
  #include "throne_tracker.h"
  #include "kernel_compat.h"
  
@@ -240,7 +240,7 @@ index b63ea0b1..0c172f8c 100644
  static bool ksu_module_mounted = false;
  
  extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
-@@ -371,6 +391,200 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -372,6 +392,200 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -441,7 +441,7 @@ index b63ea0b1..0c172f8c 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -453,7 +667,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -454,7 +668,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -453,7 +453,7 @@ index b63ea0b1..0c172f8c 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -493,6 +711,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -494,6 +712,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -471,7 +471,7 @@ index b63ea0b1..0c172f8c 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -502,6 +731,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -503,6 +732,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -484,7 +484,7 @@ index b63ea0b1..0c172f8c 100644
  
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
-@@ -511,21 +746,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,21 +747,32 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  

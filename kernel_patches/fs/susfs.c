@@ -239,6 +239,7 @@ set_inode_sus_mount:
 	inode->i_state |= INODE_STATE_SUS_MOUNT;
 	SUSFS_LOGI("set SUS_MOUNT inode state for default KSU mount path '%s'\n", pathname);
 	spin_unlock(&inode->i_lock);
+	path_put(&path);
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
