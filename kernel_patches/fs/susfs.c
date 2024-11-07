@@ -36,22 +36,28 @@ extern void try_umount(const char *mnt, bool check_mnt, int flags);
 /* sus_path */
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 DEFINE_HASHTABLE(SUS_PATH_HLIST, 10);
-static void susfs_update_sus_path_inode(char *target_pathname) {
+static int susfs_update_sus_path_inode(char *target_pathname) {
 	struct path p;
 	struct inode *inode = NULL;
-	int err = 0;
 
-	err = kern_path(target_pathname, LOOKUP_FOLLOW, &p);
-	if (err) {
+	if (kern_path(target_pathname, LOOKUP_FOLLOW, &p)) {
 		SUSFS_LOGE("Failed opening file '%s'\n", target_pathname);
-		return;
+		return 1;
+	}
+
+	// We don't allow path of which filesystem type is "tmpfs", because its inode->i_ino is starting from 1 again,
+	// which will cause wrong comparison in function susfs_sus_ino_for_filldir64()
+	if (strcmp(p.mnt->mnt_sb->s_type->name, "tmpfs") == 0) {
+		SUSFS_LOGE("target_pathname: '%s' cannot be added since its filesystem is 'tmpfs'\n", target_pathname);
+		path_put(&p);
+		return 1;
 	}
 
 	inode = d_inode(p.dentry);
 	if (!inode) {
-		path_put(&p);
 		SUSFS_LOGE("inode is NULL\n");
-		return;
+		path_put(&p);
+		return 1;
 	}
 
 	spin_lock(&inode->i_lock);
@@ -59,6 +65,7 @@ static void susfs_update_sus_path_inode(char *target_pathname) {
 	spin_unlock(&inode->i_lock);
 
 	path_put(&p);
+	return 0;
 }
 
 int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
@@ -92,7 +99,10 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 
 	new_entry->target_ino = info.target_ino;
 	strncpy(new_entry->target_pathname, info.target_pathname, SUSFS_MAX_LEN_PATHNAME-1);
-	susfs_update_sus_path_inode(new_entry->target_pathname);
+	if (susfs_update_sus_path_inode(new_entry->target_pathname)) {
+		kfree(new_entry);
+		return 1;
+	}
 	spin_lock(&susfs_spin_lock);
 	hash_add(SUS_PATH_HLIST, &new_entry->node, info.target_ino);
 	if (update_hlist) {

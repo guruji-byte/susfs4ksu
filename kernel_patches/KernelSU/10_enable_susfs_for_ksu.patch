@@ -1,8 +1,8 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..67c79d79 100644
+index 67f177f4..c8ac7afa 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -16,4 +16,139 @@ config KSU_DEBUG
+@@ -16,4 +16,140 @@ config KSU_DEBUG
  	help
  	  Enable KernelSU debug mode.
  
@@ -20,6 +20,7 @@ index 67f177f4..67c79d79 100644
 +    default y
 +    help
 +      - Allow hiding the user-defined path and all its sub-paths from various system calls.
++      - tmpfs filesystem is not allowed to be added. 
 +      - Effective on process with uid > 2000 only.
 +      - Use with cautious as it may cause performance loss and will be vulnerable to side channel attacks,
 +        just disable this feature if it doesn't work for you or you don't need it at all.
