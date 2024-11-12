@@ -17,6 +17,7 @@
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
 #include <linux/sus_su.h>
 #endif
+#include "pnode.h"
 
 spinlock_t susfs_spin_lock;
 

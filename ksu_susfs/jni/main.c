@@ -30,6 +30,7 @@
 #define CMD_SUSFS_ENABLE_LOG 0x555a0
 #define CMD_SUSFS_SET_BOOTCONFIG 0x555b0
 #define CMD_SUSFS_ADD_OPEN_REDIRECT 0x555c0
+#define CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS 0x555d0
 #define CMD_SUSFS_SUS_SU 0x60000
 
 #define SUSFS_MAX_LEN_PATHNAME 256
@@ -204,6 +205,9 @@ static void print_help(void) {
 	log("         |--> Added path will be umounted from KSU for all UIDs that are NOT su allowed, and profile template configured with umount\n");
 	log("         |--> <mode>: 0 -> umount with no flags, 1 -> umount with MNT_DETACH\n");
 	log("         |--> NOTE: susfs umount takes precedence of ksu umount\n");
+	log("\n");
+	log("        run_try_umount\n");
+	log("         |--> Make all sus mounts to be private and umount them one by one in kernel for the mount namespace of current process\n");
 	log("\n");
 	log("        set_uname <release> <version>\n");
 	log("         |--> NOTE: Only 'release' and <version> are spoofed as others are no longer needed\n");
@@ -477,6 +481,11 @@ int main(int argc, char *argv[]) {
 		}
 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_TRY_UMOUNT, &info, NULL, &error);
 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ADD_TRY_UMOUNT);
+		return error;
+	// run_try_umount
+	} else if (argc == 2 && !strcmp(argv[1], "run_try_umount")) {
+		prctl(KERNEL_SU_OPTION, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS, NULL, NULL, &error);
+		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS);
 		return error;
 	// set_uname
 	} else if (argc == 4 && !strcmp(argv[1], "set_uname")) {
