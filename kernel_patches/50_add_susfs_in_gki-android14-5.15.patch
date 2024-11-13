@@ -72,27 +72,38 @@ index 4f25015aa534..2938aa2a808e 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/inode.c b/fs/inode.c
-index dc3c911d4b92..5103272153be 100644
+index dc3c911d4b92..03787f69d1b6 100644
 --- a/fs/inode.c
 +++ b/fs/inode.c
-@@ -1797,6 +1797,11 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
+@@ -23,6 +23,10 @@
+ #include <trace/events/writeback.h>
+ #include "internal.h"
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++extern bool susfs_is_current_ksu_domain(void);
++#endif
++
+ /*
+  * Inode locking rules:
+  *
+@@ -1797,6 +1801,11 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
  	int dirty_flags = 0;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (unlikely(inode->i_state & 67108864)) {
++	if (unlikely((inode->i_state & 67108864) && susfs_is_current_ksu_domain())) {
 +		return 0;
 +	}
 +#endif
  	if (flags & (S_ATIME | S_CTIME | S_MTIME)) {
  		if (flags & S_ATIME)
  			inode->i_atime = *time;
-@@ -1825,6 +1830,11 @@ EXPORT_SYMBOL(generic_update_time);
+@@ -1825,6 +1834,11 @@ EXPORT_SYMBOL(generic_update_time);
   */
  int inode_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (unlikely(inode->i_state & 67108864)) {
++	if (unlikely((inode->i_state & 67108864) && susfs_is_current_ksu_domain())) {
 +		return 0;
 +	}
 +#endif
@@ -671,17 +682,27 @@ index 2e244ada1f97..e2c1ce3b07db 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index e429aadc359a..54fb51c4f00a 100644
+index e429aadc359a..171d80b6b5d0 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -283,8 +283,18 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+@@ -27,6 +27,10 @@
+ #include <asm/tlbflush.h>
+ #include "internal.h"
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned long *out_ino);
++#endif
++
+ #define SEQ_PUT_DEC(str, val) \
+ 		seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT-10), 8)
+ void task_mem(struct seq_file *m, struct mm_struct *mm)
+@@ -283,8 +287,17 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +		if (unlikely(inode->i_state & 67108864)) {
-+			dev = inode->android_kabi_reserved2;
-+			ino = inode->android_kabi_reserved1;
++			susfs_sus_ino_for_show_map_vma(inode->i_ino, &dev, &ino);
 +			goto bypass_orig_flow;
 +		}
 +#endif
@@ -760,28 +781,31 @@ index 09e8ed7d4161..8ef19c8c2537 100644
  	if (unlikely(buf->error))
  		return buf->error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 3e5be67027ef..b7cff22ed2ad 100644
+index 3e5be67027ef..59093d36ee4d 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -43,6 +43,24 @@
+@@ -24,6 +24,10 @@
+ #include "internal.h"
+ #include "mount.h"
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++extern void susfs_sus_ino_for_generic_fillattr(unsigned long ino, struct kstat *stat);
++#endif
++
+ /**
+  * generic_fillattr - Fill in the basic attributes from the inode struct
+  * @mnt_userns:	user namespace of the mount the inode was found from
+@@ -43,6 +47,16 @@
  void generic_fillattr(struct user_namespace *mnt_userns, struct inode *inode,
  		      struct kstat *stat)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +	if (unlikely(inode->i_state & 67108864)) {
-+		stat->dev = inode->android_kabi_reserved2;
-+		stat->ino = inode->android_kabi_reserved1;
++		susfs_sus_ino_for_generic_fillattr(inode->i_ino, stat);
 +		stat->mode = inode->i_mode;
-+		stat->nlink = inode->i_sb->android_kabi_reserved1;
++		stat->rdev = inode->i_rdev;
 +		stat->uid = i_uid_into_mnt(mnt_userns, inode);
 +		stat->gid = i_gid_into_mnt(mnt_userns, inode);
-+		stat->rdev = inode->i_rdev;
-+		stat->size = inode->i_sb->android_kabi_reserved2;
-+		stat->atime = inode->i_atime;
-+		stat->mtime = inode->i_mtime;
-+		stat->ctime = inode->i_ctime;
-+		stat->blksize = i_blocksize(inode);
-+		stat->blocks = inode->i_sb->android_kabi_reserved3;
 +		return;
 +	}
 +#endif

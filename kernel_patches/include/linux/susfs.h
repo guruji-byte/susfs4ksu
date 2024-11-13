@@ -32,11 +32,6 @@
 
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
- * inode->android_kabi_reserved1 => storing fake i_ino
- * inode->android_kabi_reserved2 => storing fake i_dev
- * inode->super_block->android_kabi_reserved1 => storing fake i_nlink
- * inode->super_block->android_kabi_reserved2 => storing fake i_size
- * inode->super_block->android_kabi_reserved3 => storing fake i_blocks
  * user_struct->android_kabi_reserved1 => storing flag 'USER_STRUCT_KABI1_'
  */
 
@@ -105,9 +100,10 @@ struct st_susfs_sus_kstat {
 	unsigned long long      spoofed_blocks;
 };
 
-struct st_susfs_sus_kstat_list {
-	struct list_head                        list;
+struct st_susfs_sus_kstat_hlist {
+	unsigned long                           target_ino;
 	struct st_susfs_sus_kstat               info;
+	struct hlist_node                       node;
 };
 #endif
 
@@ -179,6 +175,9 @@ void susfs_auto_add_sus_ksu_default_mount(const char __user *to_pathname);
 /* sus_kstat */
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 int susfs_add_sus_kstat(struct st_susfs_sus_kstat* __user user_info);
+int susfs_update_sus_kstat(struct st_susfs_sus_kstat* __user user_info);
+void susfs_sus_ino_for_generic_fillattr(unsigned long ino, struct kstat *stat);
+void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned long *out_ino);
 #endif
 /* try_umount */
 #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
