@@ -32,7 +32,7 @@
 
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
- * user_struct->android_kabi_reserved1 => storing flag 'USER_STRUCT_KABI1_'
+ * user_struct->android_kabi_reserved2 => storing flag 'USER_STRUCT_KABI2_'
  */
 
 #define INODE_STATE_SUS_PATH 16777216 // 1 << 24
@@ -40,9 +40,7 @@
 #define INODE_STATE_SUS_KSTAT 67108864 // 1 << 26
 #define INODE_STATE_OPEN_REDIRECT 134217728 // 1 << 27
 
-#define TASK_STRUCT_KABI1_IS_ZYGOTE 1 // 1 << 0
-
-#define USER_STRUCT_KABI1_NON_ROOT_USER_APP_PROFILE 16777216 // 1 << 24, for distinguishing root/no-root granted user app process
+#define USER_STRUCT_KABI2_NON_ROOT_USER_APP_PROFILE 16777216 // 1 << 24, for distinguishing root/no-root granted user app process
 
 /*********/
 /* MACRO */
