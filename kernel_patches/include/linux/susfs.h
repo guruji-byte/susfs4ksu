@@ -32,6 +32,8 @@
 
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
+ * mount->mnt.android_kabi_reserved4 => storing original mnt_id
+ * task_struct->android_kabi_reserved8 => storing last valid fake mnt_id
  * user_struct->android_kabi_reserved2 => storing flag 'USER_STRUCT_KABI2_'
  */
 
