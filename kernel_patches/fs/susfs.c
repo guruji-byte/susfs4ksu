@@ -209,8 +209,11 @@ int susfs_add_sus_mount(struct st_susfs_sus_mount* __user user_info) {
 #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
 int susfs_auto_add_sus_bind_mount(const char *pathname, struct path *path_target) {
 	struct inode *inode;
-	// Only source mount path starting with '/data/adb/' will be hidden
-	if (strncmp(pathname, "/data/adb/", 10)) {
+
+	// Only source mount path starting with '/data/adb/modules' will be hidden,
+	// this also gives users an option if they don't want the bind mount being umounted by AUTO_ADD_SUS_BIND_MOUNT,
+	// then they can bind mount the files from /data/adb/
+	if (strncmp(pathname, "/data/adb/modules/", 18)) {
 		SUSFS_LOGE("skip setting SUS_MOUNT inode state for source bind mount path '%s'\n", pathname);
 		return 1;
 	}
