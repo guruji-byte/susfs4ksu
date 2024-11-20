@@ -72,7 +72,7 @@ index 4f25015aa534..2938aa2a808e 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/inode.c b/fs/inode.c
-index dc3c911d4b92..03787f69d1b6 100644
+index dc3c911d4b92..97cfe71c8875 100644
 --- a/fs/inode.c
 +++ b/fs/inode.c
 @@ -23,6 +23,10 @@
@@ -91,7 +91,7 @@ index dc3c911d4b92..03787f69d1b6 100644
  	int dirty_flags = 0;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (unlikely((inode->i_state & 67108864) && susfs_is_current_ksu_domain())) {
++	if (susfs_is_current_ksu_domain()) {
 +		return 0;
 +	}
 +#endif
@@ -103,13 +103,26 @@ index dc3c911d4b92..03787f69d1b6 100644
  int inode_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (unlikely((inode->i_state & 67108864) && susfs_is_current_ksu_domain())) {
++	if (susfs_is_current_ksu_domain()) {
 +		return 0;
 +	}
 +#endif
  	if (inode->i_op->update_time)
  		return inode->i_op->update_time(inode, time, flags);
  	return generic_update_time(inode, time, flags);
+@@ -1881,6 +1895,12 @@ void touch_atime(const struct path *path)
+ 	struct inode *inode = d_inode(path->dentry);
+ 	struct timespec64 now;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++	if (susfs_is_current_ksu_domain()) {
++		return;
++	}
++#endif
++
+ 	if (!atime_needs_update(path, inode))
+ 		return;
+ 
 diff --git a/fs/namei.c b/fs/namei.c
 index a3922d96fac9..abe91bb2933c 100644
 --- a/fs/namei.c
