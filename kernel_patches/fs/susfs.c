@@ -21,6 +21,8 @@
 
 spinlock_t susfs_spin_lock;
 
+extern bool susfs_is_current_ksu_domain(void);
+
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 bool is_log_enable __read_mostly = true;
 #define SUSFS_LOGI(fmt, ...) if (is_log_enable) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
@@ -780,6 +782,14 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 	return 1;
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
+
+bool susfs_is_sus_proc_entry(const char *name) {
+	if (susfs_is_current_ksu_domain()) {
+		SUSFS_LOGI("prevent entry '%s' from being created in /proc/\n", name);
+		return true;
+	}
+	return false;
+}
 
 /* susfs_init */
 void susfs_init(void) {
