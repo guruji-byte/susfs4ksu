@@ -211,8 +211,6 @@ struct filename* susfs_get_redirected_path(unsigned long ino);
 int susfs_sus_su(struct st_sus_su* __user user_info);
 #endif
 
-bool susfs_is_sus_proc_entry(const char *name);
-
 /* susfs_init */
 void susfs_init(void);
 

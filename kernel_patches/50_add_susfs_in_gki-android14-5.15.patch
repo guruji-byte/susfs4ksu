@@ -731,7 +731,7 @@ index 2e244ada1f97..e2c1ce3b07db 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/generic.c b/fs/proc/generic.c
-index d32f69aaaa36..cde132a11583 100644
+index d32f69aaaa36..0db124617aab 100644
 --- a/fs/proc/generic.c
 +++ b/fs/proc/generic.c
 @@ -389,6 +389,9 @@ struct proc_dir_entry *proc_register(struct proc_dir_entry *dir,
@@ -744,19 +744,6 @@ index d32f69aaaa36..cde132a11583 100644
  static struct proc_dir_entry *__proc_create(struct proc_dir_entry **parent,
  					  const char *name,
  					  umode_t mode,
-@@ -398,6 +401,12 @@ static struct proc_dir_entry *__proc_create(struct proc_dir_entry **parent,
- 	const char *fn;
- 	struct qstr qstr;
- 
-+#ifdef CONFIG_KSU_SUSFS
-+	if (unlikely(susfs_is_sus_proc_entry(name))) {
-+		return NULL;
-+	}
-+#endif
-+
- 	if (xlate_proc_name(name, parent, &fn) != 0)
- 		goto out;
- 	qstr.name = fn;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
 index e429aadc359a..171d80b6b5d0 100644
 --- a/fs/proc/task_mmu.c
