@@ -116,3 +116,23 @@ sed -i '/androidboot.verifiedbooterror/d' ${FAKE_BOOTCONFIG}
 sed -i '/androidboot.verifyerrorpart/d' ${FAKE_BOOTCONFIG}
 ${SUSFS_BIN} set_bootconfig /data/adb/modules/susfs4ksu/fake_bootconfig.txt
 EOF
+
+#### Enable sus_su ####
+cat <<EOF >/dev/null
+enable_sus_su(){
+	## Here we manually create an system overlay an copy the sus_su and sus_su_drv_path to ${MODDIR}/system/bin after sus_su is enabled,
+	## as ksu overlay script is executed after all post-fs-data.sh scripts are finished
+
+	rm -rf ${MODDIR}/system 2>/dev/null
+	# Enable sus_su or abort the function if sus_su is not supported #
+	if ! ${SUSFS_BIN} sus_su 1; then
+		return
+	fi
+	mkdir -p ${MODDIR}/system/bin 2>/dev/null
+	# Copy the new generated sus_su_drv_path and 'sus_su' to /system/bin/ and rename 'sus_su' to 'su' #
+	cp -f /data/adb/ksu/bin/sus_su ${MODDIR}/system/bin/su
+	cp -f /data/adb/ksu/bin/sus_su_drv_path ${MODDIR}/system/bin/sus_su_drv_path
+}
+# uncomment it below to enable sus_su#
+#enable_sus_su
+EOF
