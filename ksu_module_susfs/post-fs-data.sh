@@ -136,3 +136,11 @@ enable_sus_su(){
 # uncomment it below to enable sus_su#
 #enable_sus_su
 EOF
+
+#### Hiding the exposed /proc interface of ext4 loop and jdb2 when mounting modules.img using sus_path ####
+cat <<EOF >/dev/null
+for device in $(ls -Ld /proc/fs/jbd2/loop*8 | sed 's|/proc/fs/jbd2/||; s|-8||'); do
+	${SUSFS_BIN} add_sus_path /proc/fs/jbd2/${device}-8
+	${SUSFS_BIN} add_sus_path /proc/fs/ext4/${device}
+done
+EOF
