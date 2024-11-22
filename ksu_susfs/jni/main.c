@@ -28,6 +28,9 @@
 #define CMD_SUSFS_ADD_TRY_UMOUNT 0x55580
 #define CMD_SUSFS_SET_UNAME 0x55590
 #define CMD_SUSFS_ENABLE_LOG 0x555a0
+#define CMD_SUSFS_SET_BOOTCONFIG 0x555b0
+#define CMD_SUSFS_ADD_OPEN_REDIRECT 0x555c0
+#define CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS 0x555d0
 #define CMD_SUSFS_SUS_SU 0x60000
 
 #define SUSFS_MAX_LEN_PATHNAME 256
@@ -97,6 +100,12 @@ struct st_susfs_try_umount {
 struct st_susfs_uname {
 	char                    release[__NEW_UTS_LEN+1];
 	char                    version[__NEW_UTS_LEN+1];
+};
+
+struct st_susfs_open_redirect {
+	unsigned long           target_ino;
+	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
+	char                    redirected_pathname[SUSFS_MAX_LEN_PATHNAME];
 };
 
 struct st_sus_su {
@@ -197,6 +206,9 @@ static void print_help(void) {
 	log("         |--> <mode>: 0 -> umount with no flags, 1 -> umount with MNT_DETACH\n");
 	log("         |--> NOTE: susfs umount takes precedence of ksu umount\n");
 	log("\n");
+	log("        run_try_umount\n");
+	log("         |--> Make all sus mounts to be private and umount them one by one in kernel for the mount namespace of current process\n");
+	log("\n");
 	log("        set_uname <release> <version>\n");
 	log("         |--> NOTE: Only 'release' and <version> are spoofed as others are no longer needed\n");
 	log("         |--> Spoof uname for all processes, set string to 'default' to imply the function to use original string\n");
@@ -204,6 +216,12 @@ static void print_help(void) {
 	log("\n");
 	log("        enable_log <0|1>\n");
 	log("         |--> 0: disable susfs log in kernel, 1: enable susfs log in kernel\n");
+	log("\n");
+	log("        set_bootconfig </path/to/fake_bootconfig_file>\n");
+	log("         |--> Spoof the output of /proc/bootconfig from a text file\n");
+	log("\n");
+	log("        add_open_redirect </target/path> </redirected/path>\n");
+	log("         |--> Redirect the target path to be opened with user defined path\n");
 	log("\n");
 	log("        sus_su <0|1>\n");
 	log("         |--> NOTE-1:\n");
@@ -464,6 +482,11 @@ int main(int argc, char *argv[]) {
 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_TRY_UMOUNT, &info, NULL, &error);
 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ADD_TRY_UMOUNT);
 		return error;
+	// run_try_umount
+	} else if (argc == 2 && !strcmp(argv[1], "run_try_umount")) {
+		prctl(KERNEL_SU_OPTION, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS, NULL, NULL, &error);
+		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS);
+		return error;
 	// set_uname
 	} else if (argc == 4 && !strcmp(argv[1], "set_uname")) {
 		struct st_susfs_uname info;
@@ -481,6 +504,72 @@ int main(int argc, char *argv[]) {
 		}
 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ENABLE_LOG, atoi(argv[2]), NULL, &error);
 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ENABLE_LOG);
+		return error;
+	// set_bootconfig
+	} else if (argc == 3 && !strcmp(argv[1], "set_bootconfig")) {
+		char abs_path[PATH_MAX], *p_abs_path, *buffer;
+		FILE *file;
+		long file_size;
+		size_t result; 
+
+		p_abs_path = realpath(argv[2], abs_path);
+		if (p_abs_path == NULL) {
+			perror("realpath");
+			return 1;
+		}
+		file = fopen(abs_path, "rb");
+		if (file == NULL) {
+			perror("Error opening file");
+			return 1;
+		}
+		fseek(file, 0, SEEK_END);
+		file_size = ftell(file);
+		rewind(file);
+		buffer = (char *)malloc(sizeof(char) * (file_size + 1));
+		if (buffer == NULL) {
+			perror("No enough memory");
+			fclose(file);
+			return 1;
+		}
+		result = fread(buffer, 1, file_size, file);
+		if (result != file_size) {
+			perror("Reading error");
+			fclose(file);
+			free(buffer);
+			return 1;
+		}
+		buffer[file_size] = '\0';
+		fclose(file);
+		prctl(KERNEL_SU_OPTION, CMD_SUSFS_SET_BOOTCONFIG, buffer, NULL, &error);
+		free(buffer);
+		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_SET_BOOTCONFIG);
+		return error;
+	// add_open_redirect
+	} else if (argc == 4 && !strcmp(argv[1], "add_open_redirect")) {
+		struct st_susfs_open_redirect info;
+		struct stat sb;
+		char target_pathname[PATH_MAX], *p_abs_target_pathname;
+		char redirected_pathname[PATH_MAX], *p_abs_redirected_pathname;
+
+		p_abs_target_pathname = realpath(argv[2], target_pathname);
+		if (p_abs_target_pathname == NULL) {
+			perror("realpath");
+			return 1;
+		}
+		strncpy(info.target_pathname, target_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+		p_abs_redirected_pathname = realpath(argv[3], redirected_pathname);
+		if (p_abs_redirected_pathname == NULL) {
+			perror("realpath");
+			return 1;
+		}
+		strncpy(info.redirected_pathname, redirected_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+		if (get_file_stat(info.target_pathname, &sb)) {
+			log("[-] Failed to get stat from path: '%s'\n", info.target_pathname);
+			return 1;
+		}
+		info.target_ino = sb.st_ino;
+		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_OPEN_REDIRECT, &info, NULL, &error);
+		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ADD_OPEN_REDIRECT);
 		return error;
 	// sus_su
 	} else if (argc == 3 && !strcmp(argv[1], "sus_su")) {
