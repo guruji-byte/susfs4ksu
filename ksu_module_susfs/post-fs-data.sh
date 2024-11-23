@@ -119,7 +119,7 @@ EOF
 
 #### Enable sus_su ####
 cat <<EOF >/dev/null
-enable_sus_su(){
+enable_sus_su_mode_1(){
 	## Here we manually create an system overlay an copy the sus_su and sus_su_drv_path to ${MODDIR}/system/bin after sus_su is enabled,
 	## as ksu overlay script is executed after all post-fs-data.sh scripts are finished
 
@@ -133,8 +133,11 @@ enable_sus_su(){
 	cp -f /data/adb/ksu/bin/sus_su ${MODDIR}/system/bin/su
 	cp -f /data/adb/ksu/bin/sus_su_drv_path ${MODDIR}/system/bin/sus_su_drv_path
 }
-# uncomment it below to enable sus_su#
-#enable_sus_su
+# uncomment it below to enable sus_su with mode 1 #
+#enable_sus_su_mode_1
+
+# uncomment it below to enable sus_su with mode 2 #
+#${SUSFS_BIN} sus_su 2
 EOF
 
 #### Hiding the exposed /proc interface of ext4 loop and jdb2 when mounting modules.img using sus_path ####

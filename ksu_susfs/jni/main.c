@@ -42,6 +42,8 @@
 
 #define SUS_SU_BIN_PATH "/data/adb/ksu/bin/sus_su"
 #define SUS_SU_CONF_FILE_PATH "/data/adb/ksu/bin/sus_su_drv_path"
+#define SUS_SU_WITH_OVERLAY 1
+#define SUS_SU_WITH_HOOKS 2
 
 /* VM flags from linux kernel */
 #define VM_NONE		0x00000000
@@ -109,7 +111,7 @@ struct st_susfs_open_redirect {
 };
 
 struct st_sus_su {
-	bool                    enabled;
+	int                     mode;
 	char                    drv_path[256];
 	int                     maj_dev_num;
 };
@@ -223,16 +225,21 @@ static void print_help(void) {
 	log("        add_open_redirect </target/path> </redirected/path>\n");
 	log("         |--> Redirect the target path to be opened with user defined path\n");
 	log("\n");
-	log("        sus_su <0|1>\n");
+	log("        sus_su <0|1|2>\n");
 	log("         |--> NOTE-1:\n");
-	log("                This feature allows user to disable kprobe hooks made by ksu, and instead,\n");
+	log("              - For mode 1: It disables kprobe hooks made by ksu, and instead,\n");
 	log("                a sus_su character device driver with random name will be created, and user\n");
 	log("                need to use a tool named 'sus_su' together with a path file in same current directory\n");
-	log("                named '" SUS_SU_CONF_FILE_PATH "' to get a root shell from the sus_su driver'\n");
+	log("                named '" SUS_SU_CONF_FILE_PATH "' to get a root shell from the sus_su driver.'\n");
+	log("                ** sus_su userspace tool and an overlay mount is required **'\n");
+	log("              - For mode 2: It disables kprobe hooks made by ksu, and instead,\n");
+	log("                the non-kprobe inline hooks will be enbaled, just the same implementation for non-gki kernel without kprobe supported)\n");
+	log("                ** Needs no extra userspace tools and mounts **\n");
 	log("         |--> NOTE-2:\n");
-	log("                To use it please see the service.sh from module template\n");
+	log("                Please see the service.sh template from ksu_module_susfs for the usage\n");
 	log("         |--> 0: enable core ksu kprobe hooks and disable sus_su driver\n");
-	log("         |--> 1: disable the core ksu kprobe hooks and enable sus_su driver\n");
+	log("         |--> 1: disable the core ksu kprobe hooks and enable sus_su fifo driver\n");
+	log("         |--> 2: disable the core ksu kprobe hooks and enable sus_su just with non-kprobe hooks\n");
 	log("\n");
 }
 
@@ -578,13 +585,13 @@ int main(int argc, char *argv[]) {
 		mode_t mode = 0666;
 		FILE *f_path;
 
-		if (strcmp(argv[2], "0") && strcmp(argv[2], "1")) {
+		if (strcmp(argv[2], "0") && strcmp(argv[2], "1") && strcmp(argv[2], "2")) {
 			print_help();
 			return error;
 		}
 
 		if (!strcmp(argv[2], "1")) {
-			info.enabled = true;
+			info.mode = SUS_SU_WITH_OVERLAY;
 			info.maj_dev_num = -1;
 			prctl(KERNEL_SU_OPTION, CMD_SUSFS_SUS_SU, &info, NULL, &error);
 			PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_SUS_SU);
@@ -610,8 +617,13 @@ int main(int argc, char *argv[]) {
 				log("[-] failed to change permission for '%s'\n", info.drv_path);
 				return 1;
 			}
-		} else {
-			info.enabled = false;
+		} else if (!strcmp(argv[2], "2")) {
+			info.mode = SUS_SU_WITH_HOOKS;
+			info.maj_dev_num = -1;
+			prctl(KERNEL_SU_OPTION, CMD_SUSFS_SUS_SU, &info, NULL, &error);
+			PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_SUS_SU);
+		} else if (!strcmp(argv[2], "0")) {
+			info.mode = 0;
 			prctl(KERNEL_SU_OPTION, CMD_SUSFS_SUS_SU, &info, NULL, &error);
 			PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_SUS_SU);
 			if (error)
