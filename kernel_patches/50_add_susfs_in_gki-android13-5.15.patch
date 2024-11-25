@@ -71,6 +71,35 @@ index 4f25015aa534..2938aa2a808e 100644
  	if (dentry->d_sb->s_magic != DEVPTS_SUPER_MAGIC)
  		return NULL;
  	return dentry->d_fsdata;
+diff --git a/fs/exec.c b/fs/exec.c
+index 4fabbad6743f..a4a8104561d9 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1886,6 +1886,12 @@ static int bprm_execve(struct linux_binprm *bprm,
+ 	return retval;
+ }
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
++extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
++				void *envp, int *flags);
++#endif
++
+ static int do_execveat_common(int fd, struct filename *filename,
+ 			      struct user_arg_ptr argv,
+ 			      struct user_arg_ptr envp,
+@@ -1897,6 +1903,11 @@ static int do_execveat_common(int fd, struct filename *filename,
+ 	if (IS_ERR(filename))
+ 		return PTR_ERR(filename);
+ 
++#ifdef CONFIG_KSU
++	if (susfs_is_sus_su_hooks_enabled)
++		ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
++#endif
++
+ 	/*
+ 	 * We move the actual failure in case of RLIMIT_NPROC excess from
+ 	 * set*uid() to execve() because too many poorly written programs
 diff --git a/fs/inode.c b/fs/inode.c
 index dc3c911d4b92..97cfe71c8875 100644
 --- a/fs/inode.c
@@ -631,6 +660,36 @@ index 63cc1e776d3c..f8d122b04441 100644
 +}
 +#endif
 \ No newline at end of file
+diff --git a/fs/open.c b/fs/open.c
+index e0750c146058..1789168734f2 100644
+--- a/fs/open.c
++++ b/fs/open.c
+@@ -394,6 +394,12 @@ static const struct cred *access_override_creds(void)
+ 	return old_cred;
+ }
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
++extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
++			int *flags);
++#endif
++
+ static long do_faccessat(int dfd, const char __user *filename, int mode, int flags)
+ {
+ 	struct path path;
+@@ -402,6 +408,12 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
+ 	unsigned int lookup_flags = LOOKUP_FOLLOW;
+ 	const struct cred *old_cred = NULL;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++	if (susfs_is_sus_su_hooks_enabled) {
++		ksu_handle_faccessat(&dfd, &filename, &mode, NULL);
++	}
++#endif
++
+ 	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
+ 		return -EINVAL;
+ 
 diff --git a/fs/overlayfs/inode.c b/fs/overlayfs/inode.c
 index 1ae1199b9fd2..893f8b799860 100644
 --- a/fs/overlayfs/inode.c
@@ -830,7 +889,7 @@ index 09e8ed7d4161..968d5333d0d6 100644
  	if (unlikely(buf->error))
  		return buf->error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 357a1db410ec..7c5f97c929ae 100644
+index 357a1db410ec..f885061508b1 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -24,6 +24,10 @@
@@ -861,6 +920,32 @@ index 357a1db410ec..7c5f97c929ae 100644
  	stat->dev = inode->i_sb->s_dev;
  	stat->ino = inode->i_ino;
  	stat->mode = inode->i_mode;
+@@ -199,6 +213,12 @@ int vfs_fstat(int fd, struct kstat *stat)
+  *
+  * 0 will be returned on success, and a -ve error code if unsuccessful.
+  */
++
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
++extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
++#endif
++
+ static int vfs_statx(int dfd, const char __user *filename, int flags,
+ 	      struct kstat *stat, u32 request_mask)
+ {
+@@ -206,6 +226,12 @@ static int vfs_statx(int dfd, const char __user *filename, int flags,
+ 	unsigned lookup_flags = 0;
+ 	int error;
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++	if (susfs_is_sus_su_hooks_enabled) {
++		ksu_handle_stat(&dfd, &filename, &flags);
++	}
++#endif
++
+ 	if (flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT | AT_EMPTY_PATH |
+ 		      AT_STATX_SYNC_TYPE))
+ 		return -EINVAL;
 diff --git a/fs/statfs.c b/fs/statfs.c
 index 2a37f9f3dba1..69067b5fe3dc 100644
 --- a/fs/statfs.c

@@ -747,6 +747,9 @@ struct filename* susfs_get_redirected_path(unsigned long ino) {
 
 /* sus_su */
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
+bool susfs_is_sus_su_hooks_enabled __read_mostly = false;
+extern void ksu_susfs_enable_sus_su(void);
+extern void ksu_susfs_disable_sus_su(void);
 int susfs_sus_su(struct st_sus_su* __user user_info) {
 	struct st_sus_su info;
 
@@ -755,7 +758,7 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 		return 1;
 	}
 
-	if (info.enabled) {
+	if (info.mode == SUS_SU_WITH_OVERLAY) {
 		sus_su_fifo_init(&info.maj_dev_num, info.drv_path);
 		ksu_susfs_enable_sus_su();
 		if (info.maj_dev_num < 0) {
@@ -764,10 +767,19 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 		}
 		SUSFS_LOGI("core kprobe hooks for ksu are disabled!\n");
 		SUSFS_LOGI("sus_su driver '%s' is enabled!\n", info.drv_path);
+		SUSFS_LOGI("sus_su mode: SUS_SU_WITH_OVERLAY\n");
 		if (copy_to_user(user_info, &info, sizeof(info)))
 			SUSFS_LOGE("copy_to_user() failed\n");
 		return 0;
-	} else {
+	} else if (info.mode == SUS_SU_WITH_HOOKS) {
+		ksu_susfs_enable_sus_su();
+		susfs_is_sus_su_hooks_enabled = true;
+		SUSFS_LOGI("core kprobe hooks for ksu are disabled!\n");
+		SUSFS_LOGI("non-kprobe hook sus_su is enabled!\n");
+		SUSFS_LOGI("sus_su mode: SUS_SU_WITH_HOOKS\n");
+		return 0;
+	} else if (info.mode == 0) {
+		susfs_is_sus_su_hooks_enabled = false;
 		ksu_susfs_disable_sus_su();
 		sus_su_fifo_exit(&info.maj_dev_num, info.drv_path);
 		if (info.maj_dev_num != -1) {
