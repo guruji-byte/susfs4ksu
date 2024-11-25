@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..33ea412b 100644
+index 67f177f4..076c61dd 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,144 @@ config KSU_DEBUG
@@ -129,7 +129,7 @@ index 67f177f4..33ea412b 100644
 +
 +config KSU_SUSFS_SUS_SU
 +    bool "Enable SUS-SU in runtime temporarily"
-+    depends on KSU_SUSFS
++    depends on KSU_SUSFS && KPROBES && HAVE_KPROBES && KPROBE_EVENTS
 +    default y
 +    help
 +      - Allow user to enable or disable core ksu kprobes hooks temporarily in runtime. There are 2 modes for sus_su.
