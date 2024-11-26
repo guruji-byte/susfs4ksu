@@ -30,8 +30,13 @@
 #define TRY_UMOUNT_DEFAULT 0
 #define TRY_UMOUNT_DETACH 1
 
+#define SUS_SU_WITH_OVERLAY 1
+#define SUS_SU_WITH_HOOKS 2
+
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
+ * mount->mnt.android_kabi_reserved4 => storing original mnt_id
+ * task_struct->android_kabi_reserved8 => storing last valid fake mnt_id
  * user_struct->android_kabi_reserved2 => storing flag 'USER_STRUCT_KABI2_'
  */
 
@@ -145,7 +150,7 @@ struct st_susfs_open_redirect_hlist {
 /* sus_su */
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
 struct st_sus_su {
-	bool        enabled;
+	int         mode;
 	char        drv_path[256];
 	int         maj_dev_num;
 };
@@ -208,6 +213,7 @@ struct filename* susfs_get_redirected_path(unsigned long ino);
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
 int susfs_sus_su(struct st_sus_su* __user user_info);
 #endif
+
 /* susfs_init */
 void susfs_init(void);
 
