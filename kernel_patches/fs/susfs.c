@@ -21,6 +21,8 @@
 
 spinlock_t susfs_spin_lock;
 
+extern bool susfs_is_current_ksu_domain(void);
+
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 bool is_log_enable __read_mostly = true;
 #define SUSFS_LOGI(fmt, ...) if (is_log_enable) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
@@ -349,7 +351,7 @@ int susfs_add_sus_kstat(struct st_susfs_sus_kstat* __user user_info) {
 	spin_lock(&susfs_spin_lock);
 	hash_add(SUS_KSTAT_HLIST, &new_entry->node, info.target_ino);
 	if (update_hlist) {
-		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
+		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
 				new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 				new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
 				new_entry->info.spoofed_nlink, new_entry->info.spoofed_size,
@@ -357,7 +359,7 @@ int susfs_add_sus_kstat(struct st_susfs_sus_kstat* __user user_info) {
 				new_entry->info.spoofed_atime_tv_nsec, new_entry->info.spoofed_mtime_tv_nsec, new_entry->info.spoofed_ctime_tv_nsec,
 				new_entry->info.spoofed_blksize, new_entry->info.spoofed_blocks);
 	} else {
-		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully updated to SUS_KSTAT_HLIST\n",
+		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully updated to SUS_KSTAT_HLIST\n",
 				new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 				new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
 				new_entry->info.spoofed_nlink, new_entry->info.spoofed_size,
@@ -633,7 +635,7 @@ int susfs_set_bootconfig(char* __user user_fake_boot_config) {
 	spin_unlock(&susfs_spin_lock);
 
 	if (res > 0) {
-		SUSFS_LOGI("fake_boot_config is set, length of string: %u\n", strlen(fake_boot_config));
+		SUSFS_LOGI("fake_boot_config is set, length of string: %lu\n", strlen(fake_boot_config));
 		return 0;
 	}
 	SUSFS_LOGI("failed setting fake_boot_config\n");
@@ -745,6 +747,9 @@ struct filename* susfs_get_redirected_path(unsigned long ino) {
 
 /* sus_su */
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
+bool susfs_is_sus_su_hooks_enabled __read_mostly = false;
+extern void ksu_susfs_enable_sus_su(void);
+extern void ksu_susfs_disable_sus_su(void);
 int susfs_sus_su(struct st_sus_su* __user user_info) {
 	struct st_sus_su info;
 
@@ -753,7 +758,7 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 		return 1;
 	}
 
-	if (info.enabled) {
+	if (info.mode == SUS_SU_WITH_OVERLAY) {
 		sus_su_fifo_init(&info.maj_dev_num, info.drv_path);
 		ksu_susfs_enable_sus_su();
 		if (info.maj_dev_num < 0) {
@@ -762,10 +767,19 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 		}
 		SUSFS_LOGI("core kprobe hooks for ksu are disabled!\n");
 		SUSFS_LOGI("sus_su driver '%s' is enabled!\n", info.drv_path);
+		SUSFS_LOGI("sus_su mode: SUS_SU_WITH_OVERLAY\n");
 		if (copy_to_user(user_info, &info, sizeof(info)))
 			SUSFS_LOGE("copy_to_user() failed\n");
 		return 0;
-	} else {
+	} else if (info.mode == SUS_SU_WITH_HOOKS) {
+		ksu_susfs_enable_sus_su();
+		susfs_is_sus_su_hooks_enabled = true;
+		SUSFS_LOGI("core kprobe hooks for ksu are disabled!\n");
+		SUSFS_LOGI("non-kprobe hook sus_su is enabled!\n");
+		SUSFS_LOGI("sus_su mode: SUS_SU_WITH_HOOKS\n");
+		return 0;
+	} else if (info.mode == 0) {
+		susfs_is_sus_su_hooks_enabled = false;
 		ksu_susfs_disable_sus_su();
 		sus_su_fifo_exit(&info.maj_dev_num, info.drv_path);
 		if (info.maj_dev_num != -1) {
