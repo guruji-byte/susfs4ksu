@@ -92,7 +92,7 @@ index 9ac456e7913c..6b46cc4b2c73 100644
  	if (IS_ERR(filename))
  		return PTR_ERR(filename);
  
-+#ifdef CONFIG_KSU
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +	if (susfs_is_sus_su_hooks_enabled)
 +		ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
 +#endif
