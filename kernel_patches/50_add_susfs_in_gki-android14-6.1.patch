@@ -903,7 +903,7 @@ index 9c53edb60c03..21e0aca66681 100644
  	if (unlikely(buf->error))
  		return false;
 diff --git a/fs/stat.c b/fs/stat.c
-index ef50573c72a2..8e2af5fb8f96 100644
+index ef50573c72a2..631ecf10b458 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -25,6 +25,10 @@
@@ -934,31 +934,35 @@ index ef50573c72a2..8e2af5fb8f96 100644
  	stat->dev = inode->i_sb->s_dev;
  	stat->ino = inode->i_ino;
  	stat->mode = inode->i_mode;
-@@ -214,6 +228,11 @@ int getname_statx_lookup_flags(int flags)
-  *
-  * 0 will be returned on success, and a -ve error code if unsuccessful.
-  */
+@@ -256,6 +270,11 @@ static int vfs_statx(int dfd, struct filename *filename, int flags,
+ 	return error;
+ }
+ 
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
-+extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
++extern struct filename* susfs_ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
 +#endif
 +
- static int vfs_statx(int dfd, struct filename *filename, int flags,
- 	      struct kstat *stat, u32 request_mask)
+ int vfs_fstatat(int dfd, const char __user *filename,
+ 			      struct kstat *stat, int flags)
  {
-@@ -221,6 +240,12 @@ static int vfs_statx(int dfd, struct filename *filename, int flags,
- 	unsigned int lookup_flags = getname_statx_lookup_flags(flags);
- 	int error;
+@@ -263,7 +282,16 @@ int vfs_fstatat(int dfd, const char __user *filename,
+ 	int statx_flags = flags | AT_NO_AUTOMOUNT;
+ 	struct filename *name;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +	if (susfs_is_sus_su_hooks_enabled) {
-+		ksu_handle_stat(&dfd, (const char __user **)&filename->name, &flags);
++		name = susfs_ksu_handle_stat(&dfd, &filename, &statx_flags);
++		goto orig_flow;
 +	}
 +#endif
-+
- 	if (flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT | AT_EMPTY_PATH |
- 		      AT_STATX_SYNC_TYPE))
- 		return -EINVAL;
+ 	name = getname_flags(filename, getname_statx_lookup_flags(statx_flags), NULL);
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++orig_flow:
++#endif
+ 	ret = vfs_statx(dfd, name, statx_flags, stat, STATX_BASIC_STATS);
+ 	putname(name);
+ 
 diff --git a/fs/statfs.c b/fs/statfs.c
 index 96d1c3edf289..277f66d7bcf3 100644
 --- a/fs/statfs.c
