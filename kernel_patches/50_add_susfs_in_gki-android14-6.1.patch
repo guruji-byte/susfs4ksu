@@ -1,5 +1,5 @@
 diff --git a/fs/Makefile b/fs/Makefile
-index 102e4cd2b..7c1aa2860 100644
+index 102e4cd2bf69..7c1aa2860900 100644
 --- a/fs/Makefile
 +++ b/fs/Makefile
 @@ -17,6 +17,9 @@ obj-y :=	open.o read_write.o file_table.o super.o \
@@ -13,14 +13,13 @@ index 102e4cd2b..7c1aa2860 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 49461353a..e552358e3 100644
+index 49461353ac37..6cf20f78ac1e 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -2410,6 +2410,12 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
+@@ -2410,6 +2410,11 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
  			continue;
  		if (dentry_cmp(dentry, str, hashlen_len(hashlen)) != 0)
  			continue;
-+
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +		if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved2 & 16777216)) {
 +			continue;
@@ -29,21 +28,20 @@ index 49461353a..e552358e3 100644
  		*seqp = seq;
  		return dentry;
  	}
-@@ -2492,6 +2498,12 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
+@@ -2491,6 +2496,11 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
+ 
  		if (dentry->d_name.hash != hash)
  			continue;
- 
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +		if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved2 & 16777216)) {
 +			continue;
 +		}
 +#endif
-+
+ 
  		spin_lock(&dentry->d_lock);
  		if (dentry->d_parent != parent)
- 			goto next;
 diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
-index 4f25015aa..d24089c58 100644
+index 4f25015aa534..d24089c58e94 100644
 --- a/fs/devpts/inode.c
 +++ b/fs/devpts/inode.c
 @@ -596,6 +596,12 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
@@ -73,10 +71,10 @@ index 4f25015aa..d24089c58 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/exec.c b/fs/exec.c
-index 3c736b8aa..4d816c38a 100644
+index e6644f3b384f..9d92ebdbe37b 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
-@@ -1882,6 +1882,12 @@ static int bprm_execve(struct linux_binprm *bprm,
+@@ -1881,6 +1881,12 @@ static int bprm_execve(struct linux_binprm *bprm,
  	return retval;
  }
  
@@ -89,7 +87,7 @@ index 3c736b8aa..4d816c38a 100644
  static int do_execveat_common(int fd, struct filename *filename,
  			      struct user_arg_ptr argv,
  			      struct user_arg_ptr envp,
-@@ -1893,6 +1899,11 @@ static int do_execveat_common(int fd, struct filename *filename,
+@@ -1892,6 +1898,11 @@ static int do_execveat_common(int fd, struct filename *filename,
  	if (IS_ERR(filename))
  		return PTR_ERR(filename);
  
@@ -102,7 +100,7 @@ index 3c736b8aa..4d816c38a 100644
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
 diff --git a/fs/inode.c b/fs/inode.c
-index 5dd0f81e9..37bf30999 100644
+index 417ba66af4a3..b9f1b4868a7f 100644
 --- a/fs/inode.c
 +++ b/fs/inode.c
 @@ -23,6 +23,10 @@
@@ -116,7 +114,7 @@ index 5dd0f81e9..37bf30999 100644
  /*
   * Inode locking rules:
   *
-@@ -1922,6 +1926,12 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
+@@ -1918,6 +1922,12 @@ int generic_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
  	int dirty_flags = 0;
  
@@ -129,7 +127,7 @@ index 5dd0f81e9..37bf30999 100644
  	if (flags & (S_ATIME | S_CTIME | S_MTIME)) {
  		if (flags & S_ATIME)
  			inode->i_atime = *time;
-@@ -1950,6 +1960,11 @@ EXPORT_SYMBOL(generic_update_time);
+@@ -1946,6 +1956,11 @@ EXPORT_SYMBOL(generic_update_time);
   */
  int inode_update_time(struct inode *inode, struct timespec64 *time, int flags)
  {
@@ -141,7 +139,7 @@ index 5dd0f81e9..37bf30999 100644
  	if (inode->i_op->update_time)
  		return inode->i_op->update_time(inode, time, flags);
  	return generic_update_time(inode, time, flags);
-@@ -2006,6 +2021,12 @@ void touch_atime(const struct path *path)
+@@ -2002,6 +2017,12 @@ void touch_atime(const struct path *path)
  	struct inode *inode = d_inode(path->dentry);
  	struct timespec64 now;
  
@@ -155,7 +153,7 @@ index 5dd0f81e9..37bf30999 100644
  		return;
  
 diff --git a/fs/namei.c b/fs/namei.c
-index a4a660069..48ec4c127 100644
+index 893b1ec58c02..4476612969f7 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -41,6 +41,10 @@
@@ -279,7 +277,7 @@ index a4a660069..48ec4c127 100644
  	return retval;
  }
  
-@@ -2966,6 +3024,12 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
+@@ -2968,6 +3026,12 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
  	if (IS_APPEND(dir))
  		return -EPERM;
  
@@ -292,7 +290,7 @@ index a4a660069..48ec4c127 100644
  	if (check_sticky(mnt_userns, dir, inode) || IS_APPEND(inode) ||
  	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode) ||
  	    HAS_UNMAPPED_ID(mnt_userns, inode))
-@@ -2996,7 +3060,21 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
+@@ -2998,7 +3062,21 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
  static inline int may_create(struct user_namespace *mnt_userns,
  			     struct inode *dir, struct dentry *child)
  {
@@ -314,7 +312,7 @@ index a4a660069..48ec4c127 100644
  	if (child->d_inode)
  		return -EEXIST;
  	if (IS_DEADDIR(dir))
-@@ -3224,6 +3302,12 @@ static int may_open(struct user_namespace *mnt_userns, const struct path *path,
+@@ -3226,6 +3304,12 @@ static int may_open(struct user_namespace *mnt_userns, const struct path *path,
  	if (!inode)
  		return -ENOENT;
  
@@ -327,7 +325,7 @@ index a4a660069..48ec4c127 100644
  	switch (inode->i_mode & S_IFMT) {
  	case S_IFLNK:
  		return -ELOOP;
-@@ -3300,7 +3384,21 @@ static int may_o_create(struct user_namespace *mnt_userns,
+@@ -3302,7 +3386,21 @@ static int may_o_create(struct user_namespace *mnt_userns,
  			const struct path *dir, struct dentry *dentry,
  			umode_t mode)
  {
@@ -349,7 +347,7 @@ index a4a660069..48ec4c127 100644
  	if (error)
  		return error;
  
-@@ -3421,6 +3519,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3423,6 +3521,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  	}
  	if (dentry->d_inode) {
  		/* Cached positive dentry: will open in f_op->open */
@@ -362,7 +360,7 @@ index a4a660069..48ec4c127 100644
  		return dentry;
  	}
  
-@@ -3452,6 +3556,16 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3454,6 +3558,16 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  		dentry = atomic_open(nd, dentry, file, open_flag, mode);
  		if (unlikely(create_error) && dentry == ERR_PTR(-ENOENT))
  			dentry = ERR_PTR(create_error);
@@ -379,7 +377,7 @@ index a4a660069..48ec4c127 100644
  		return dentry;
  	}
  
-@@ -3466,6 +3580,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3468,6 +3582,12 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  			}
  			dput(dentry);
  			dentry = res;
@@ -392,7 +390,7 @@ index a4a660069..48ec4c127 100644
  		}
  	}
  
-@@ -3804,6 +3924,9 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
+@@ -3806,6 +3926,9 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
  	struct nameidata nd;
  	int flags = op->lookup_flags;
  	struct file *filp;
@@ -402,7 +400,7 @@ index a4a660069..48ec4c127 100644
  
  	set_nameidata(&nd, dfd, pathname, NULL);
  	filp = path_openat(&nd, op, flags | LOOKUP_RCU);
-@@ -3811,6 +3934,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
+@@ -3813,6 +3936,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
  		filp = path_openat(&nd, op, flags);
  	if (unlikely(filp == ERR_PTR(-ESTALE)))
  		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
@@ -429,7 +427,7 @@ index a4a660069..48ec4c127 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 59a9f8777..a0838ffb2 100644
+index 1533550f7356..86e08fc1298e 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -570,7 +568,7 @@ index 59a9f8777..a0838ffb2 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3474,6 +3560,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3469,6 +3555,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -581,7 +579,7 @@ index 59a9f8777..a0838ffb2 100644
  
  	BUG_ON(!ns);
  
-@@ -3493,6 +3583,13 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3488,6 +3578,13 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -595,7 +593,7 @@ index 59a9f8777..a0838ffb2 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3534,6 +3631,29 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3529,6 +3626,29 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -625,7 +623,7 @@ index 59a9f8777..a0838ffb2 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3828,6 +3948,12 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3823,6 +3943,12 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -638,7 +636,7 @@ index 59a9f8777..a0838ffb2 100644
  	return ret;
  }
  
-@@ -4719,6 +4845,27 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4714,6 +4840,27 @@ const struct proc_ns_operations mntns_operations = {
  	.owner		= mntns_owner,
  };
  
@@ -667,7 +665,7 @@ index 59a9f8777..a0838ffb2 100644
  static struct ctl_table fs_namespace_sysctls[] = {
  	{
 diff --git a/fs/open.c b/fs/open.c
-index 026a4047c..a28ef9a24 100644
+index 6f1458976899..1a9dd7158cb8 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -418,6 +418,12 @@ static const struct cred *access_override_creds(void)
@@ -697,7 +695,7 @@ index 026a4047c..a28ef9a24 100644
  		return -EINVAL;
  
 diff --git a/fs/overlayfs/inode.c b/fs/overlayfs/inode.c
-index 36d5b04bd..d7da1e36d 100644
+index 36d5b04bd61c..d7da1e36dac5 100644
 --- a/fs/overlayfs/inode.c
 +++ b/fs/overlayfs/inode.c
 @@ -166,6 +166,21 @@ int ovl_getattr(struct user_namespace *mnt_userns, const struct path *path,
@@ -723,7 +721,7 @@ index 36d5b04bd..d7da1e36d 100644
  	old_cred = ovl_override_creds(dentry->d_sb);
  	err = vfs_getattr(&realpath, stat, request_mask, flags);
 diff --git a/fs/overlayfs/readdir.c b/fs/overlayfs/readdir.c
-index aad7a62a6..565ae6f4b 100644
+index aad7a62a6246..565ae6f4b64c 100644
 --- a/fs/overlayfs/readdir.c
 +++ b/fs/overlayfs/readdir.c
 @@ -935,7 +935,19 @@ static int ovl_dir_open(struct inode *inode, struct file *file)
@@ -747,7 +745,7 @@ index aad7a62a6..565ae6f4b 100644
  	if (IS_ERR(realfile)) {
  		kfree(od);
 diff --git a/fs/overlayfs/super.c b/fs/overlayfs/super.c
-index f39d0faf7..2c8b56cc1 100644
+index f39d0faf706e..2c8b56cc1f11 100644
 --- a/fs/overlayfs/super.c
 +++ b/fs/overlayfs/super.c
 @@ -325,6 +325,18 @@ static int ovl_statfs(struct dentry *dentry, struct kstatfs *buf)
@@ -770,7 +768,7 @@ index f39d0faf7..2c8b56cc1 100644
  
  	err = vfs_statfs(&path, buf);
 diff --git a/fs/proc/bootconfig.c b/fs/proc/bootconfig.c
-index 2e244ada1..e2c1ce3b0 100644
+index 2e244ada1f97..e2c1ce3b07db 100644
 --- a/fs/proc/bootconfig.c
 +++ b/fs/proc/bootconfig.c
 @@ -9,11 +9,21 @@
@@ -796,7 +794,7 @@ index 2e244ada1..e2c1ce3b0 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index c6f982504..5ef5bf3c7 100644
+index c6f9825043ba..5ef5bf3c7ceb 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
 @@ -27,6 +27,10 @@
@@ -829,7 +827,7 @@ index c6f982504..5ef5bf3c7 100644
  	}
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 846f9455a..3b22b4a94 100644
+index 846f9455ae22..3b22b4a94d73 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
 @@ -106,6 +106,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
@@ -869,7 +867,7 @@ index 846f9455a..3b22b4a94 100644
  	if (sb->s_op->show_devname) {
  		seq_puts(m, "device ");
 diff --git a/fs/readdir.c b/fs/readdir.c
-index 9c53edb60..e05ff8a54 100644
+index 9c53edb60c03..e05ff8a54745 100644
 --- a/fs/readdir.c
 +++ b/fs/readdir.c
 @@ -24,6 +24,10 @@
@@ -896,7 +894,7 @@ index 9c53edb60..e05ff8a54 100644
  	if (unlikely(buf->error))
  		return false;
 diff --git a/fs/stat.c b/fs/stat.c
-index ef50573c7..933f01bb5 100644
+index ef50573c72a2..8e2af5fb8f96 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -25,6 +25,10 @@
@@ -953,7 +951,7 @@ index ef50573c7..933f01bb5 100644
  		      AT_STATX_SYNC_TYPE))
  		return -EINVAL;
 diff --git a/fs/statfs.c b/fs/statfs.c
-index 96d1c3edf..277f66d7b 100644
+index 96d1c3edf289..277f66d7bcf3 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -109,6 +109,22 @@ int user_statfs(const char __user *pathname, struct kstatfs *st)
@@ -993,7 +991,7 @@ index 96d1c3edf..277f66d7b 100644
  }
  
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
-index 824bcc7b5..68f2c96f0 100644
+index 824bcc7b5dbc..68f2c96f03a1 100644
 --- a/kernel/kallsyms.c
 +++ b/kernel/kallsyms.c
 @@ -856,8 +856,18 @@ static int s_show(struct seq_file *m, void *p)
@@ -1016,7 +1014,7 @@ index 824bcc7b5..68f2c96f0 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 380cee197..108fa34c1 100644
+index 380cee197118..108fa34c11b9 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
 @@ -78,6 +78,10 @@
