@@ -83,7 +83,7 @@ index 4f25015aa534..d24089c58e94 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/exec.c b/fs/exec.c
-index e6644f3b384f..9d92ebdbe37b 100644
+index e6644f3b384f..ea3c116a9256 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -1881,6 +1881,12 @@ static int bprm_execve(struct linux_binprm *bprm,
@@ -92,7 +92,7 @@ index e6644f3b384f..9d92ebdbe37b 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
-+extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
++extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,
 +				void *envp, int *flags);
 +#endif
 +
@@ -105,7 +105,7 @@ index e6644f3b384f..9d92ebdbe37b 100644
  
 +#ifdef CONFIG_KSU
 +	if (susfs_is_sus_su_hooks_enabled)
-+		ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
++		ksu_handle_execveat_sucompat(&fd, &filename, &argv, &envp, &flags);
 +#endif
 +
  	/*
