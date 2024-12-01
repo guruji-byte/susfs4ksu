@@ -13,10 +13,22 @@ index 102e4cd2bf69..7c1aa2860900 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 49461353ac37..6cf20f78ac1e 100644
+index 49461353ac37..a4c0916a94db 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -2410,6 +2410,11 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
+@@ -2304,6 +2304,11 @@ static noinline struct dentry *__d_lookup_rcu_op_compare(
+ 			continue;
+ 		if (dentry->d_name.hash != hashlen_hash(hashlen))
+ 			continue;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++		if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current_cred()->user->android_kabi_reserved2 & 16777216)) {
++			continue;
++		}
++#endif
+ 		tlen = dentry->d_name.len;
+ 		tname = dentry->d_name.name;
+ 		/* we want a consistent (name,len) pair */
+@@ -2410,6 +2415,11 @@ struct dentry *__d_lookup_rcu(const struct dentry *parent,
  			continue;
  		if (dentry_cmp(dentry, str, hashlen_len(hashlen)) != 0)
  			continue;
@@ -28,7 +40,7 @@ index 49461353ac37..6cf20f78ac1e 100644
  		*seqp = seq;
  		return dentry;
  	}
-@@ -2491,6 +2496,11 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
+@@ -2491,6 +2501,11 @@ struct dentry *__d_lookup(const struct dentry *parent, const struct qstr *name)
  
  		if (dentry->d_name.hash != hash)
  			continue;
