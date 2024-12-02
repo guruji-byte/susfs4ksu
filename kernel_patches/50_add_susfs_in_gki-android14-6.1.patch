@@ -803,21 +803,22 @@ index 2e244ada1f97..baf86392d1a2 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index c6f9825043ba..5ef5bf3c7ceb 100644
+index c6f9825043ba..3406ec077904 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -27,6 +27,10 @@
- #include <asm/tlbflush.h>
- #include "internal.h"
+@@ -273,6 +273,11 @@ static void show_vma_header_prefix(struct seq_file *m,
+ 	seq_putc(m, ' ');
+ }
  
++
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned long *out_ino);
++extern void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned long *out_ino);
 +#endif
 +
- #define SEQ_PUT_DEC(str, val) \
- 		seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT-10), 8)
- void task_mem(struct seq_file *m, struct mm_struct *mm)
-@@ -287,8 +291,17 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+ static void
+ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+ {
+@@ -287,8 +292,17 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
