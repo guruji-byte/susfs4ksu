@@ -801,7 +801,7 @@ void susfs_init(void) {
 	spin_lock_init(&susfs_uname_spin_lock);
 	susfs_my_uname_init();
 #endif
-	SUSFS_LOGI("susfs is initialized!\n");
+	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
 
 /* No module exit is needed becuase it should never be a loadable kernel module */
