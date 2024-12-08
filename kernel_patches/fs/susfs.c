@@ -17,6 +17,9 @@
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
 #include <linux/sus_su.h>
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+#include "pnode.h"
+#endif
 
 spinlock_t susfs_spin_lock;
 
