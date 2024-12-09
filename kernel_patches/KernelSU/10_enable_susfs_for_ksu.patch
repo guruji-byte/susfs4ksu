@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..d20e5cc9 100644
+index 67f177f4..1e54e3ff 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,145 @@ config KSU_DEBUG
@@ -56,7 +56,7 @@ index 67f177f4..d20e5cc9 100644
 +config KSU_SUSFS_SUS_KSTAT
 +    bool "Enable to spoof suspicious kstat"
 +    depends on KSU_SUSFS
-+    default n
++    default y
 +    help
 +      - Allow spoofing the kstat of user-defined file/directory.
 +      - Effective on all processes.
@@ -90,7 +90,7 @@ index 67f177f4..d20e5cc9 100644
 +config KSU_SUSFS_SPOOF_UNAME
 +    bool "Enable to spoof uname"
 +    depends on KSU_SUSFS
-+    default n
++    default y
 +    help
 +      - Allow spoofing the string returned by uname syscall to user-defined string.
 +      - Effective on all processes.
@@ -121,7 +121,7 @@ index 67f177f4..d20e5cc9 100644
 +config KSU_SUSFS_OPEN_REDIRECT
 +    bool "Enable to redirect a path to be opened with another path (experimental)"
 +    depends on KSU_SUSFS
-+    default n
++    default y
 +    help
 +      - Allow redirecting a target path to be opened with another user-defined path.
 +      - Effective only on processes with uid < 2000.
