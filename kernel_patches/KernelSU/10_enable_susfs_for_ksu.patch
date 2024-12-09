@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..076c61dd 100644
+index 67f177f4..b64c0a6a 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,144 @@ config KSU_DEBUG
@@ -56,7 +56,7 @@ index 67f177f4..076c61dd 100644
 +config KSU_SUSFS_SUS_KSTAT
 +    bool "Enable to spoof suspicious kstat"
 +    depends on KSU_SUSFS
-+    default y
++    default n
 +    help
 +      - Allow spoofing the kstat of user-defined file/directory.
 +      - Effective on all processes.
@@ -90,7 +90,7 @@ index 67f177f4..076c61dd 100644
 +config KSU_SUSFS_SPOOF_UNAME
 +    bool "Enable to spoof uname"
 +    depends on KSU_SUSFS
-+    default y
++    default n
 +    help
 +      - Allow spoofing the string returned by uname syscall to user-defined string.
 +      - Effective on all processes.
@@ -121,7 +121,7 @@ index 67f177f4..076c61dd 100644
 +config KSU_SUSFS_OPEN_REDIRECT
 +    bool "Enable to redirect a path to be opened with another path (experimental)"
 +    depends on KSU_SUSFS
-+    default y
++    default n
 +    help
 +      - Allow redirecting a target path to be opened with another user-defined path.
 +      - Effective only on processes with uid < 2000.
@@ -148,7 +148,7 @@ index 67f177f4..076c61dd 100644
 +
  endmenu
 diff --git a/kernel/Makefile b/kernel/Makefile
-index 9fec3ef3..9262055b 100644
+index 9fec3ef3..47b683db 100644
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
 @@ -51,4 +51,57 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
@@ -156,9 +156,9 @@ index 9fec3ef3..9262055b 100644
  ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
  
 +ifeq ($(shell test -e $(srctree)/fs/susfs.c; echo $$?),0)
-+ifdef KSU_SUSFS
 +$(eval SUSFS_VERSION=$(shell cat $(srctree)/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g'))
 +$(info -- SUSFS_VERSION: $(SUSFS_VERSION))
++ifdef KSU_SUSFS
 +ccflags-y += -DKSU_SUSFS
 +endif
 +ifdef KSU_SUSFS_SUS_PATH
