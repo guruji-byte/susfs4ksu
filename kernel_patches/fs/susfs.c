@@ -18,14 +18,14 @@
 #include "pnode.h"
 #endif
 
-spinlock_t susfs_spin_lock;
+static spinlock_t susfs_spin_lock;
 
 extern bool susfs_is_current_ksu_domain(void);
 
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
-bool is_log_enable __read_mostly = true;
-#define SUSFS_LOGI(fmt, ...) if (is_log_enable) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
-#define SUSFS_LOGE(fmt, ...) if (is_log_enable) pr_err("susfs:[%u][%d][%s]" fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
+bool susfs_is_log_enabled __read_mostly = true;
+#define SUSFS_LOGI(fmt, ...) if (susfs_is_log_enabled) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
+#define SUSFS_LOGE(fmt, ...) if (susfs_is_log_enabled) pr_err("susfs:[%u][%d][%s]" fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
 #else
 #define SUSFS_LOGI(fmt, ...) 
 #define SUSFS_LOGE(fmt, ...) 
@@ -603,9 +603,9 @@ int susfs_spoof_uname(struct new_utsname* tmp) {
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 void susfs_set_log(bool enabled) {
 	spin_lock(&susfs_spin_lock);
-	is_log_enable = enabled;
+	susfs_is_log_enabled = enabled;
 	spin_unlock(&susfs_spin_lock);
-	if (is_log_enable) {
+	if (susfs_is_log_enabled) {
 		pr_info("susfs: enable logging to kernel");
 	} else {
 		pr_info("susfs: disable logging to kernel");
