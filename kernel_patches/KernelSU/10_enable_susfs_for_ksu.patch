@@ -280,7 +280,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a5..bbf8cbe9 100644
+index 913867a5..813d4c5d 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -782,7 +782,8 @@ index 913867a5..bbf8cbe9 100644
  	// check old process's selinux context, if it is not zygote, ignore it!
  	// because some su apps may setuid to untrusted_app but they are in global mount namespace
  	// when we umount for such process, that is a disaster!
- 	bool is_zygote_child = is_zygote(old->security);
+-	bool is_zygote_child = is_zygote(old->security);
++	bool is_zygote_child = ksu_is_zygote(old->security);
 +#endif
  	if (!is_zygote_child) {
  		pr_info("handle umount ignore non zygote child: %d\n",
@@ -1196,13 +1197,31 @@ index 17a25dae..5ecee39a 100644
  
  u32 ksu_get_devpts_sid()
 diff --git a/kernel/selinux/selinux.h b/kernel/selinux/selinux.h
-index 88f1e7d3..22d4b324 100644
+index 88f1e7d3..36edcc7f 100644
 --- a/kernel/selinux/selinux.h
 +++ b/kernel/selinux/selinux.h
-@@ -16,6 +16,18 @@ bool is_zygote(void *cred);
+@@ -4,17 +4,29 @@
+ #include "linux/types.h"
+ #include "linux/version.h"
  
- void apply_kernelsu_rules();
+-void setup_selinux(const char *);
++void ksu_setup_selinux(const char *);
  
+-void setenforce(bool);
++void ksu_setenforce(bool);
+ 
+-bool getenforce();
++bool ksu_getenforce();
+ 
+-bool is_ksu_domain();
++bool ksu_is_ksu_domain();
+ 
+-bool is_zygote(void *cred);
++bool ksu_is_zygote(void *cred);
+ 
+-void apply_kernelsu_rules();
++void ksu_apply_kernelsu_rules();
++
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +bool susfs_is_sid_equal(void *sec, u32 sid2);
 +u32 susfs_get_sid_from_name(const char *secctx_name);
@@ -1214,10 +1233,9 @@ index 88f1e7d3..22d4b324 100644
 +void susfs_set_init_sid(void);
 +bool susfs_is_current_init_domain(void);
 +#endif
-+
+ 
  u32 ksu_get_devpts_sid();
  
- #endif
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
 index 966cbf8f..954b333f 100644
 --- a/kernel/sucompat.c
