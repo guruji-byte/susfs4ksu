@@ -819,38 +819,49 @@ index e429aadc359a..36f65cbb53b6 100644
  	}
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 49650e54d2f8..057a10b7b136 100644
+index 49650e54d2f8..62ee0b1a10d7 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
-@@ -106,6 +106,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
+@@ -18,6 +18,10 @@
+ #include "pnode.h"
+ #include "internal.h"
+ 
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++extern bool ksu_is_ksu_domain(void);
++#endif
++
+ static __poll_t mounts_poll(struct file *file, poll_table *wait)
+ {
+ 	struct seq_file *m = file->private_data;
+@@ -106,6 +110,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely(r->mnt.mnt_root->d_inode->i_state & 33554432))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !ksu_is_ksu_domain()))
 +		return 0;
 +#endif
 +
  	if (sb->s_op->show_devname) {
  		err = sb->s_op->show_devname(m, mnt_path.dentry);
  		if (err)
-@@ -140,6 +145,10 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
+@@ -140,6 +149,10 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
  	struct path mnt_path = { .dentry = mnt->mnt_root, .mnt = mnt };
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely(r->mnt.mnt_root->d_inode->i_state & 33554432))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !ksu_is_ksu_domain()))
 +		return 0;
 +#endif
  	seq_printf(m, "%i %i %u:%u ", r->mnt_id, r->mnt_parent->mnt_id,
  		   MAJOR(sb->s_dev), MINOR(sb->s_dev));
  	if (sb->s_op->show_path) {
-@@ -202,6 +211,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
+@@ -202,6 +215,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely(r->mnt.mnt_root->d_inode->i_state & 33554432))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !ksu_is_ksu_domain()))
 +		return 0;
 +#endif
 +
