@@ -771,7 +771,7 @@ index 88f1e7d3..22d4b324 100644
  
  #endif
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 966cbf8f..400cb320 100644
+index 966cbf8f..cd089036 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -66,6 +66,31 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
@@ -784,7 +784,7 @@ index 966cbf8f..400cb320 100644
 +	const char su[] = SU_PATH;
 +	struct filename *name = getname_flags(*filename_user, getname_statx_lookup_flags(*flags), NULL);
 +
-+	if (unlikely(!filename_user)) {
++	if (unlikely(IS_ERR(name) || name->name == NULL)) {
 +		return name;
 +	}
 +
