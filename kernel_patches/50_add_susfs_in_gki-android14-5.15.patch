@@ -424,7 +424,7 @@ index a3922d96fac9..13dae0c16152 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..bd8990401601 100644
+index 2bef741f2092..6ce6f76ed270 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -626,7 +626,7 @@ index 2bef741f2092..bd8990401601 100644
 +#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
 +	// Just for the compatibility of Magic Mount KernelSU
 +	if (!ret && susfs_is_current_ksu_domain()) {
-+		susfs_auto_add_sus_ksu_default_mount(to_pathname);
++		susfs_auto_add_sus_ksu_default_mount(dir_name);
 +	}
 +#endif
 +
