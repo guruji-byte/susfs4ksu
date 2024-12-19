@@ -1,8 +1,8 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f..35e4afe 100644
+index 67f177f..a569a94 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -16,4 +16,146 @@ config KSU_DEBUG
+@@ -16,4 +16,147 @@ config KSU_DEBUG
  	help
  	  Enable KernelSU debug mode.
  
@@ -20,6 +20,7 @@ index 67f177f..35e4afe 100644
 +    default n
 +    help
 +      - Enable to indicate the current KernelSU repo is forked by 5ec1cff
++      - Every mounts from /debug_ramdisk/workdir will be treated as magic mount and processed differently by susfs
 +
 +config KSU_SUSFS_SUS_PATH
 +    bool "Enable to hide suspicious path (NOT recommended)"
