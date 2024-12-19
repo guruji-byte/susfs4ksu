@@ -1,7 +1,7 @@
 ## Introduction ##
 - An addon root hiding kernel patches and userspace module for KernelSU.
 
-- The userspace tool `ksu_susfs` and `sus_su`, as well as the ksu module, require a susfs patched kernel to work.
+- The userspace tool `ksu_susfs`, as well as the ksu module, require a susfs patched kernel to work.
 
 # Warning #
 - This is only experimental code, that said it can harm your system or cause performance hit, **YOU ARE !! W A R N E D !!** already
@@ -15,43 +15,26 @@
 3. Run `cp ./kernel_patches/50_add_susfs_in_kernel-<kernel_version>.patch $KERNEL_REPO/common/`
 4. Run `cp ./kernel_patches/fs/susfs.c $KERNEL_REPO/common/fs/`
 5. Run `cp ./kernel_patches/include/linux/susfs.h $KERNEL_REPO/common/include/linux/`
-6. Run `cp ./kernel_patches/fs/sus_su.c $KERNEL_REPO/common/fs/`
-7. Run `cp ./kernel_patches/include/linux/sus_su.h $KERNEL_REPO/common/include/linux/`
-8. Run `cd $KERNEL_REPO/KernelSU` and then `patch -p1 < 10_enable_susfs_for_ksu.patch`
-9. Run `cd $KERNEL_REPO/common` and then `patch -p1 < 50_add_susfs_in_kernel.patch`, **if there are failed patches, you may try to patch them manually by yourself.**
-10. Make sure again to have `CONFIG_KSU` and `CONFIG_KSU_SUSFS` enabled before building the kernel, some other SUSFS feature may be disabled by default, you may enable/disable them via `menuconfig`, `kernel defconfig`, or change the `default [y|n]` option under each `config KSU_SUSFS_` option in `$KernelSU_repo/kernel/Kconfig` if you build with a new defconfig every time.
-11. If your kernel already has the **KSU non-kprobe hook patches** applied, then you have to **`DISABLE`** the `CONFIG_KSU_SUSFS_SUS_SU` option.
-12. For `gki kernel android14` or above, if you are building from google artifacts, it is necessary to delete the file `$KERNEL_REPO/common/android/abi_gki_protected_exports_aarch64` and `$KERNEL_REPO/common/android/abi_gki_protected_exports_x86_64`, otherwise some modules like WiFi will not work. Or you can just remove those files whenever those files exist in your kernel repo.
-13. For gki kernel, when building from google artifacts, another thing you may need is to fix the `local spl_date` in function `build_gki_boot_images()` in `$KERNEL_REPO/build/kernel/build_utils.sh` to match the current boot security patch level of your phone.
-14. Build and flash the kernel.
-15. For some compilor error, please refer to the section **[Known Compilor Issues]** below.
-16. For other building tips, please refer to the section **[Other Building Tips]** below.
-
-## Patch Instruction (For non-GKI only) ##
-1. Clone the repo with a tag that has release version, as tag with release version is more stable
-2. Run `cp ./kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch $KERNEL_ROOT/KernelSU/`
-3. Run `cp ./kernel_patches/50_add_susfs_in_kernel-<kernel_version>.patch $KERNEL_ROOT/`
-4. Run `cp ./kernel_patches/fs/susfs.c $KERNEL_ROOT/fs/`
-5. Run `cp ./kernel_patches/include/linux/susfs.h $KERNEL_ROOT/include/linux/`
-6. Run `cp ./kernel_patches/fs/sus_su.c $KERNEL_ROOT/fs/`
-7. Run `cp ./kernel_patches/include/linux/sus_su.h $KERNEL_ROOT/include/linux/`
-8. Run `cd $KERNEL_ROOT/KernelSU` and then `patch -p1 < 10_enable_susfs_for_ksu.patch`
-9. Run `cd $KERNEL_ROOT` and then `patch -p1 < 50_add_susfs_in_kernel.patch`, **if there are failed patches, you may try to patch them manually by yourself.**
-10. Make sure again to have `CONFIG_KSU` and `CONFIG_KSU_SUSFS` enabled before building the kernel, some other SUSFS feature may be disabled by default, you may enable/disable them via `menuconfig`, `kernel defconfig`, or change the `default [y|n]` option under each `config KSU_SUSFS_` option in `$KernelSU_repo/kernel/Kconfig` if you build with a new defconfig every time.
-11. If your kernel already has the **KSU non-kprobe hook patches** applied, then you have to **`DISABLE`** the `CONFIG_KSU_SUSFS_SUS_SU` option.
-12. For some compilor error, please refer to the section **[Known Compilor Issues]** below.
-13. For other building tips, please refer to the section **[Other Building Tips]** below.
+6. Run `cd $KERNEL_REPO/KernelSU` and then `patch -p1 < 10_enable_susfs_for_ksu.patch`
+7. Run `cd $KERNEL_REPO/common` and then `patch -p1 < 50_add_susfs_in_kernel.patch`, **if there are failed patches, you may try to patch them manually by yourself.**
+8. Make sure again to have `CONFIG_KSU` and `CONFIG_KSU_SUSFS` enabled before building the kernel, some other SUSFS feature may be disabled by default, you may enable/disable them via `menuconfig`, `kernel defconfig`, or change the `default [y|n]` option under each `config KSU_SUSFS_` option in `$KernelSU_repo/kernel/Kconfig` if you build with a new defconfig every time.
+9. If your kernel already has the **KSU non-kprobe hook patches** applied, then you have to **`DISABLE`** the `CONFIG_KSU_SUSFS_SUS_SU` option.
+10. If your KernelSU repo is a fork by 5ec1cff, then you should enable **`KSU_SUSFS_HAS_MAGIC_MOUNT`** option.
+11. For `gki kernel android14` or above, if you are building from google artifacts, it is necessary to delete the file `$KERNEL_REPO/common/android/abi_gki_protected_exports_aarch64` and `$KERNEL_REPO/common/android/abi_gki_protected_exports_x86_64`, otherwise some modules like WiFi will not work. Or you can just remove those files whenever those files exist in your kernel repo.
+12. For gki kernel, when building from google artifacts, another thing you may need is to fix the `local spl_date` in function `build_gki_boot_images()` in `$KERNEL_REPO/build/kernel/build_utils.sh` to match the current boot security patch level of your phone.
+13. Build and flash the kernel.
+14. For some compilor error, please refer to the section **[Known Compilor Issues]** below.
+15. For other building tips, please refer to the section **[Other Building Tips]** below.
 
 ## Build ksu_susfs userspace tool ##
 1. Run `./build_ksu_susfs_tool.sh` to build the userspace tool `ksu_susfs`, and the arm64 and arm binary will be copied to `ksu_module_susfs/tools/` as well.
 2. Now you can also push the compiled `ksu_susfs` tool to `/data/adb/ksu/bin/` so that you can run it directly in adb root shell or termux root shell, as well as in your own ksu modules.
 
-## Build sus_su userspace tool ##
+## Build sus_su userspace tool (Deprecated) ##
 **--Important Notes--**
-- sus_su is now providing 2 modes, 1st mode requires sus_su userspace tool and overlayfs to work, 2nd mode requires no extra tools or mounts in userspace but literally just the same non-kprobe hooks su implementation for non-gki kernel.
-- Newer xiaomi devices are found to have a root detection service running which is named "mrmd" and it is spawned by init process, and since sus_su mounted by overlayfs can't be umounted for process spawned by init process, so 1st mode will get detected unless there is a better umount scheme for init spawned process, that's why it is strongly suggested to use 2nd mode only.
+- sus_su userspace tool is now deprecated, as newer xiaomi devices are found to have a root detection service running which is named "mrmd" and it is spawned by init process, and since sus_su mounted by overlayfs can't be umounted for process spawned by init process, so it will get detected unless there is a better umount scheme for init spawned process.
 
-**--Instruction for 1st mode--**
+**--Instruction for 1st mode (Deprecated)--**
 - sus_su userspace tool is an executable aimed to get a root shell by sending a request to a susfs fifo driver, this is exclusive for **"kprobe hook enabled KSU"** only, **DO NOT** use it if your KernelSU has kprobe **disabled**.
 - Only apps with root access granted by ksu manager are allow to run 'su'.
 - For best compatibility, sus_su requires overlayfs to allow all other 3rd party apps to execute 'su' to get root shell.
@@ -62,7 +45,7 @@
 3. Run `./build_ksu_module.sh` to build the module and flash again.
 
 **--Instruction for 2nd mode--**
-- Just run `ksu_susfs sus_su 2` to disable core kprobe hooks and enable inline hooks su.
+- Just run `ksu_susfs sus_su 2` to disable core kprobe hooks and enable inline hooks for su.
 
 
 ## Build susfs4ksu module ##
@@ -90,13 +73,9 @@
    5. Look for line `$(obj)/config_data: $(KCONFIG_CONFIG) FORCE`, and replace it with `$(obj)/config_data: arch/arm64/configs/stock_defconfig FORCE`
 
 ## Known Compiler Issues ##
-- error: use of undeclared identifier 'execve_kp', 'newfstatat_kp', etc..
+   1. error: no member named 'android_kabi_reservedx' in 'struct yyyyyyyy'
 
-   1. Disable `CONFIG_KSU_SUSFS_SUS_SU` before compiling kernel.
-- error: no member named 'android_kabi_reservedx' in 'struct yyyyyyyy'
-
-   2. Because normally the memeber `u64 android_kabi_reservedx;` doesn't exist in all structs with all kernel version below 4.19, and sometimes it is not guaranteed existed with kernel version >= 4.19 and <= 5.4, and even with GKI kernel, like some of the custom kernels has all of them disabled. So at this point if the susfs patches didn't have them patched for you, then what you need to do is to manually append the member to the end of the corresponding struct definition, it should be `u64 android_kabi_reservedx;` with the last `x` starting from `1`, like `u64 android_kabi_reserved1;`, `u64 android_kabi_reserved2;` and so on. You may also refer to patch from other branches like `kernel-4.14`, `kernel-4.9` of this repo for extra `diff` of the missing kabi members.
- 
+      - Because normally the memeber `u64 android_kabi_reservedx;` doesn't exist in all structs with all kernel version below 4.19, and sometimes it is not guaranteed existed with kernel version >= 4.19 and <= 5.4, and even with GKI kernel, like some of the custom kernels has all of them disabled. So at this point if the susfs patches didn't have them patched for you, then what you need to do is to manually append the member to the end of the corresponding struct definition, it should be `u64 android_kabi_reservedx;` with the last `x` starting from `1`, like `u64 android_kabi_reserved1;`, `u64 android_kabi_reserved2;` and so on. You may also refer to patch from other branches like `kernel-4.14`, `kernel-4.9` of this repo for extra `diff` of the missing kabi members.
 
 ## Other Known Issues ##
 - Some of the File Explorer Apps cannot display a files/directory properly when a specific sub path of '/sdcard' or '/storage/emulated/0' is added to sus_path
@@ -105,6 +84,7 @@
 
 ## Credits ##
 - KernelSU: https://github.com/tiann/KernelSU
+- KernelSU fork: https://github.com/5ec1cff/KernelSU
 - @Kartatz: for ideas and original commit from https://github.com/Dominium-Apum/kernel_xiaomi_chime/pull/1/commits/74f8d4ecacd343432bb8137b7e7fbe3fd9fef189
 
 ## Telegram ##
