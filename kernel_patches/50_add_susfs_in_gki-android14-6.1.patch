@@ -1,3 +1,23 @@
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index 19ee995bd..cf68b538d 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -239,4 +239,5 @@ source "drivers/peci/Kconfig"
+ 
+ source "drivers/hte/Kconfig"
+ 
++source "drivers/kernelsu/Kconfig"
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+index bdf1c6614..d69d75d15 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -189,3 +189,5 @@ obj-$(CONFIG_COUNTER)		+= counter/
+ obj-$(CONFIG_MOST)		+= most/
+ obj-$(CONFIG_PECI)		+= peci/
+ obj-$(CONFIG_HTE)		+= hte/
++
++obj-$(CONFIG_KSU) += kernelsu/
 diff --git a/fs/Makefile b/fs/Makefile
 index 102e4cd2b..a1929dbc8 100644
 --- a/fs/Makefile
@@ -430,7 +450,7 @@ index a4a660069..9d6c90b86 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 59a9f8777..06de41207 100644
+index 59a9f8777..2deeb84d3 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -625,7 +645,21 @@ index 59a9f8777..06de41207 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3828,6 +3947,11 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3606,6 +3725,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+ 
+ 	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
+ 
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++	// Just for the compatibility of Magic Mount KernelSU
++	if (!ret && susfs_is_current_ksu_domain()) {
++		susfs_auto_add_sus_ksu_default_mount(to_pathname);
++	}
++#endif /* CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT */
++
+ 	kfree(options);
+ out_data:
+ 	kfree(kernel_dev);
+@@ -3828,6 +3954,11 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -637,7 +671,7 @@ index 59a9f8777..06de41207 100644
  	return ret;
  }
  
-@@ -4740,3 +4864,24 @@ static int __init init_fs_namespace_sysctls(void)
+@@ -4740,3 +4871,24 @@ static int __init init_fs_namespace_sysctls(void)
  fs_initcall(init_fs_namespace_sysctls);
  
  #endif /* CONFIG_SYSCTL */
