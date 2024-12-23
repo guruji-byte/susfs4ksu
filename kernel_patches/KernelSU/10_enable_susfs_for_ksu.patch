@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f..a569a94 100644
+index 67f177f..29bc9f5 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,147 @@ config KSU_DEBUG
@@ -17,7 +17,7 @@ index 67f177f..a569a94 100644
 +config KSU_SUSFS_HAS_MAGIC_MOUNT
 +    bool "Say yes if the current KernelSU repo has magic mount implemented (default n)"
 +    depends on KSU
-+    default n
++    default y
 +    help
 +      - Enable to indicate the current KernelSU repo is forked by 5ec1cff
 +      - Every mounts from /debug_ramdisk/workdir will be treated as magic mount and processed differently by susfs
@@ -309,7 +309,7 @@ index bed501c..e02aa51 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a..813d4c5 100644
+index 913867a..9b052d7 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -753,7 +753,7 @@ index 913867a..813d4c5 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -475,6 +829,18 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -475,6 +829,19 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
  	ksu_umount_mnt(&path, flags);
  }
  
@@ -764,6 +764,7 @@ index 913867a..813d4c5 100644
 +	ksu_try_umount("/system_ext", true, 0);
 +	ksu_try_umount("/vendor", true, 0);
 +	ksu_try_umount("/product", true, 0);
++	ksu_try_umount("/odm", true, 0);
 +	ksu_try_umount("/data/adb/modules", false, MNT_DETACH);
 +	ksu_try_umount("/debug_ramdisk", false, MNT_DETACH);
 +}
@@ -772,7 +773,7 @@ index 913867a..813d4c5 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -494,6 +860,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -494,6 +861,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -790,7 +791,7 @@ index 913867a..813d4c5 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -503,6 +880,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -503,6 +881,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -803,7 +804,7 @@ index 913867a..813d4c5 100644
  
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
-@@ -512,31 +895,42 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,31 +896,42 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
@@ -1268,7 +1269,7 @@ index 88f1e7d..36edcc7 100644
  u32 ksu_get_devpts_sid();
  
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 47a673c..3a3c857 100644
+index 47a673c..ffa3642 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -20,7 +20,7 @@
@@ -1280,7 +1281,39 @@ index 47a673c..3a3c857 100644
  
  static void __user *userspace_stack_buffer(const void *d, size_t len)
  {
-@@ -132,7 +132,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+@@ -66,6 +66,31 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
+ 	return 0;
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) && defined(CONFIG_KSU_SUSFS_SUS_SU)
++struct filename* susfs_ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags) {
++	// const char sh[] = SH_PATH;
++	const char su[] = SU_PATH;
++	struct filename *name = getname_flags(*filename_user, getname_statx_lookup_flags(*flags), NULL);
++
++	if (unlikely(IS_ERR(name) || name->name == NULL)) {
++		return name;
++	}
++
++	if (!ksu_is_allow_uid(current_uid().val)) {
++		return name;
++	}
++
++	if (likely(memcmp(name->name, su, sizeof(su)))) {
++		return name;
++	}
++
++	const char sh[] = SH_PATH;
++	pr_info("vfs_fstatat su->sh!\n");
++	memcpy((void *)name->name, sh, sizeof(sh));
++	return name;
++}
++#endif
++
+ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
+ {
+ 	// const char sh[] = SH_PATH;
+@@ -132,7 +157,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
  	pr_info("do_execveat_common su found\n");
  	memcpy((void *)filename->name, sh, sizeof(sh));
  
@@ -1289,7 +1322,7 @@ index 47a673c..3a3c857 100644
  
  	return 0;
  }
-@@ -159,7 +159,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
+@@ -159,7 +184,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
  	pr_info("sys_execve su found\n");
  	*filename_user = ksud_user_path();
  
@@ -1298,7 +1331,7 @@ index 47a673c..3a3c857 100644
  
  	return 0;
  }
-@@ -235,3 +235,30 @@ void ksu_sucompat_exit()
+@@ -235,3 +260,30 @@ void ksu_sucompat_exit()
  	unregister_kprobe(&faccessat_kp);
  #endif
  }
