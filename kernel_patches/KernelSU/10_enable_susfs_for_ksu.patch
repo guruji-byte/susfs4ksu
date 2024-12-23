@@ -309,7 +309,7 @@ index bed501c..e02aa51 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a..9b052d7 100644
+index 913867a..7403937 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -323,14 +323,14 @@ index 913867a..9b052d7 100644
  #include "allowlist.h"
  #include "arch.h"
  #include "core_hook.h"
-@@ -45,9 +49,26 @@
+@@ -45,13 +49,30 @@
  #include "throne_tracker.h"
  #include "kernel_compat.h"
  
 +#ifdef CONFIG_KSU_SUSFS
 +bool susfs_is_allow_su(void)
 +{
-+	if (is_manager()) {
++	if (ksu_is_manager()) {
 +		// we are manager, allow!
 +		return true;
 +	}
@@ -351,6 +351,11 @@ index 913867a..9b052d7 100644
  
  static inline bool is_allow_su()
  {
+-	if (is_manager()) {
++	if (ksu_is_manager()) {
+ 		// we are manager, allow!
+ 		return true;
+ 	}
 @@ -106,7 +127,7 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
  	set_groups(cred, group_info);
  }
@@ -378,6 +383,15 @@ index 913867a..9b052d7 100644
  
  	return 0;
  }
+@@ -225,7 +246,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+ 	}
+ 
+ 	bool from_root = 0 == current_uid().val;
+-	bool from_manager = is_manager();
++	bool from_manager = ksu_is_manager();
+ 
+ 	if (!from_root && !from_manager) {
+ 		// only root or manager can access this interface
 @@ -249,7 +270,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	if (arg2 == CMD_GRANT_ROOT) {
  		if (is_allow_su()) {
@@ -1034,6 +1048,19 @@ index cc2df24..26974c9 100644
  
  bool ksu_is_safe_mode(void);
  
+diff --git a/kernel/manager.h b/kernel/manager.h
+index be5bbce..93fa267 100644
+--- a/kernel/manager.h
++++ b/kernel/manager.h
+@@ -13,7 +13,7 @@ static inline bool ksu_is_manager_uid_valid()
+ 	return ksu_manager_uid != KSU_INVALID_UID;
+ }
+ 
+-static inline bool is_manager()
++static inline bool ksu_is_manager()
+ {
+ 	return unlikely(ksu_manager_uid == current_uid().val);
+ }
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
 index b4e6eae..9a6b91d 100644
 --- a/kernel/selinux/rules.c
