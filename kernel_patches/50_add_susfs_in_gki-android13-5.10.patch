@@ -42,14 +42,14 @@ index cb588cee9669..d729ed0ad0dd 100644
  		if (dentry->d_parent != parent)
  			goto next;
 diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
-index 4f25015aa534..2938aa2a808e 100644
+index 4f25015aa534..643b177e6289 100644
 --- a/fs/devpts/inode.c
 +++ b/fs/devpts/inode.c
 @@ -596,6 +596,11 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
  	return dentry;
  }
  
-+#ifdef CONFIG_KSU_SUSFS_SUS_SU
++#if defined(CONFIG_KSU_SUSFS_SUS_SU) && !defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
 +extern bool ksu_devpts_hook;
 +extern int ksu_handle_devpts(struct inode*);
 +#endif
@@ -61,7 +61,7 @@ index 4f25015aa534..2938aa2a808e 100644
   */
  void *devpts_get_priv(struct dentry *dentry)
  {
-+#ifdef CONFIG_KSU_SUSFS_SUS_SU
++#if defined(CONFIG_KSU_SUSFS_SUS_SU) && !defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
 +	if (likely(ksu_devpts_hook)) {
 +		ksu_handle_devpts(dentry->d_inode);
 +	}
@@ -424,7 +424,7 @@ index 8872a503699e..ba573cc7ba38 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 6d1f11a6b290..80fcf7ad574a 100644
+index 6d1f11a6b290..1f5f3c8195c4 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -34,6 +34,23 @@
@@ -619,7 +619,20 @@ index 6d1f11a6b290..80fcf7ad574a 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3653,6 +3772,12 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3448,6 +3567,12 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+ 		goto out_data;
+ 
+ 	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++	// Just for the compatibility of Magic Mount KernelSU
++	if (!ret && susfs_is_current_ksu_domain()) {
++		susfs_auto_add_sus_ksu_default_mount(dir_name);
++	}
++#endif
+ 
+ 	kfree(options);
+ out_data:
+@@ -3653,6 +3778,12 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -632,7 +645,7 @@ index 6d1f11a6b290..80fcf7ad574a 100644
  	return ret;
  }
  
-@@ -4129,3 +4254,24 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4129,3 +4260,24 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
