@@ -349,7 +349,7 @@ int susfs_add_sus_kstat(struct st_susfs_sus_kstat* __user user_info) {
 	spin_lock(&susfs_spin_lock);
 	hash_add(SUS_KSTAT_HLIST, &new_entry->node, info.target_ino);
 	if (update_hlist) {
-		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
+		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
 				new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 				new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
 				new_entry->info.spoofed_nlink, new_entry->info.spoofed_size,
@@ -357,7 +357,7 @@ int susfs_add_sus_kstat(struct st_susfs_sus_kstat* __user user_info) {
 				new_entry->info.spoofed_atime_tv_nsec, new_entry->info.spoofed_mtime_tv_nsec, new_entry->info.spoofed_ctime_tv_nsec,
 				new_entry->info.spoofed_blksize, new_entry->info.spoofed_blocks);
 	} else {
-		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully updated to SUS_KSTAT_HLIST\n",
+		SUSFS_LOGI("is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully updated to SUS_KSTAT_HLIST\n",
 				new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 				new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
 				new_entry->info.spoofed_nlink, new_entry->info.spoofed_size,
@@ -624,37 +624,37 @@ void susfs_set_log(bool enabled) {
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 
-/* spoof_bootconfig */
-#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
-static char *fake_boot_config = NULL;
-int susfs_set_bootconfig(char* __user user_fake_boot_config) {
+/* spoof_cmdline_or_bootconfig */
+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+static char *fake_cmdline_or_bootconfig = NULL;
+int susfs_set_cmdline_or_bootconfig(char* __user user_fake_cmdline_or_bootconfig) {
 	int res;
 
-	if (!fake_boot_config) {
+	if (!fake_cmdline_or_bootconfig) {
 		// 4096 is enough I guess
-		fake_boot_config = kmalloc(SUSFS_FAKE_BOOT_CONFIG_SIZE, GFP_KERNEL);
-		if (!fake_boot_config) {
+		fake_cmdline_or_bootconfig = kmalloc(SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE, GFP_KERNEL);
+		if (!fake_cmdline_or_bootconfig) {
 			SUSFS_LOGE("no enough memory\n");
 			return -ENOMEM;
 		}
 	}
 
 	spin_lock(&susfs_spin_lock);
-	memset(fake_boot_config, 0, SUSFS_FAKE_BOOT_CONFIG_SIZE);
-	res = strncpy_from_user(fake_boot_config, user_fake_boot_config, SUSFS_FAKE_BOOT_CONFIG_SIZE-1);
+	memset(fake_cmdline_or_bootconfig, 0, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE);
+	res = strncpy_from_user(fake_cmdline_or_bootconfig, user_fake_cmdline_or_bootconfig, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE-1);
 	spin_unlock(&susfs_spin_lock);
 
 	if (res > 0) {
-		SUSFS_LOGI("fake_boot_config is set, length of string: %lu\n", strlen(fake_boot_config));
+		SUSFS_LOGI("fake_cmdline_or_bootconfig is set, length of string: %u\n", strlen(fake_cmdline_or_bootconfig));
 		return 0;
 	}
-	SUSFS_LOGI("failed setting fake_boot_config\n");
+	SUSFS_LOGI("failed setting fake_cmdline_or_bootconfig\n");
 	return res;
 }
 
-int susfs_spoof_bootconfig(struct seq_file *m) {
-	if (fake_boot_config != NULL) {
-		seq_puts(m, fake_boot_config);
+int susfs_spoof_cmdline_or_bootconfig(struct seq_file *m) {
+	if (fake_cmdline_or_bootconfig != NULL) {
+		seq_puts(m, fake_cmdline_or_bootconfig);
 		return 0;
 	}
 	return 1;
