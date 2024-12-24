@@ -424,7 +424,7 @@ index 8ad2a5329b94..58faa261e3d0 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 63cc1e776d3c..e673faca7391 100644
+index 63cc1e776d3c..927aef047200 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -623,7 +623,7 @@ index 63cc1e776d3c..e673faca7391 100644
  
  	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
  
-+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
++#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT) && defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
 +	// Just for the compatibility of Magic Mount KernelSU
 +	if (!ret && susfs_is_current_ksu_domain()) {
 +		susfs_auto_add_sus_ksu_default_mount(dir_name);
@@ -776,22 +776,22 @@ index fb86a93e2571..b20aae797a14 100644
  
  	err = vfs_statfs(&path, buf);
 diff --git a/fs/proc/bootconfig.c b/fs/proc/bootconfig.c
-index 2e244ada1f97..baf86392d1a2 100644
+index 2e244ada1f97..239616b8a296 100644
 --- a/fs/proc/bootconfig.c
 +++ b/fs/proc/bootconfig.c
 @@ -12,8 +12,19 @@
  
  static char *saved_boot_config;
  
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
-+extern int susfs_spoof_bootconfig(struct seq_file *m);
++#ifdef KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
++extern int susfs_spoof_cmdline_or_bootconfig(struct seq_file *m);
 +#endif
 +
  static int boot_config_proc_show(struct seq_file *m, void *v)
  {
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
++#ifdef KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +	if (saved_boot_config) {
-+		if (!susfs_spoof_bootconfig(m)) {
++		if (!susfs_spoof_cmdline_or_bootconfig(m)) {
 +			return 0;
 +		}
 +	}
