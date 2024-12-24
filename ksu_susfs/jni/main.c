@@ -699,8 +699,8 @@ int main(int argc, char *argv[]) {
 					ptr_buf += str_len;
 				}
 				if (enabled_features & (1 << 11)) {
-					str_len = strlen("CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG\n");
-					strncpy(ptr_buf, "CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG\n", str_len);
+					str_len = strlen("CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG\n");
+					strncpy(ptr_buf, "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG\n", str_len);
 					ptr_buf += str_len;
 				}
 				if (enabled_features & (1 << 12)) {
@@ -711,6 +711,11 @@ int main(int argc, char *argv[]) {
 				if (enabled_features & (1 << 13)) {
 					str_len = strlen("CONFIG_KSU_SUSFS_SUS_SU\n");
 					strncpy(ptr_buf, "CONFIG_KSU_SUSFS_SUS_SU\n", str_len);
+					ptr_buf += str_len;
+				}
+				if (enabled_features & (1 << 14)) {
+					str_len = strlen("CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT\n");
+					strncpy(ptr_buf, "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT\n", str_len);
 					ptr_buf += str_len;
 				}
 				printf("%s", enabled_features_buf);
