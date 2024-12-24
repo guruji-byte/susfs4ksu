@@ -1075,7 +1075,7 @@ index be5bbce..93fa267 100644
  	return unlikely(ksu_manager_uid == current_uid().val);
  }
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
-index b4e6eae..9a6b91d 100644
+index b4e6eae..5f15d3a 100644
 --- a/kernel/selinux/rules.c
 +++ b/kernel/selinux/rules.c
 @@ -24,9 +24,9 @@ static struct policydb *get_policydb(void)
@@ -1090,11 +1090,15 @@ index b4e6eae..9a6b91d 100644
  		pr_info("SELinux permissive or disabled, apply rules!\n");
  	}
  
-@@ -122,6 +122,14 @@ void apply_kernelsu_rules()
+@@ -122,6 +122,18 @@ void apply_kernelsu_rules()
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
  
 +#ifdef CONFIG_KSU_SUSFS
++	// https://github.com/5ec1cff/KernelSU/commit/2cbda5f963fcdb10dc570f49453f3a810ef57d35
++	// https://github.com/topjohnwu/Magisk/blob/c0899f2939a3b27a6173952f2b150b0eb04148c7/native/src/sepolicy/rules.rs#L133
++	ksu_deny(db, "init", "adb_data_file", "dir", "search");
++	ksu_deny(db, "vendor_init", "adb_data_file", "dir", "search");
 +	// Allow umount in zygote process without installing zygisk
 +	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
 +	susfs_set_init_sid();
@@ -1105,7 +1109,7 @@ index b4e6eae..9a6b91d 100644
  	rcu_read_unlock();
  }
  
-@@ -182,13 +190,13 @@ static void reset_avc_cache()
+@@ -182,13 +194,13 @@ static void reset_avc_cache()
  	selinux_xfrm_notify_policyload();
  }
  
