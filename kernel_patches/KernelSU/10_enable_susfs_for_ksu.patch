@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f..a569a94 100644
+index 67f177f..9f7a587 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,147 @@ config KSU_DEBUG
@@ -118,12 +118,12 @@ index 67f177f..a569a94 100644
 +      - Automatically hide ksu and susfs symbols from '/proc/kallsyms'.
 +      - Effective on all processes.
 +
-+config KSU_SUSFS_SPOOF_BOOTCONFIG
-+    bool "Enable to spoof /proc/bootconfig"
++config KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
++    bool "Enable to spoof /proc/bootconfig (gki) or /proc/cmdline (non-gki)"
 +    depends on KSU_SUSFS
 +    default y
 +    help
-+      - Spoof the output of /proc/bootconfig with a user-defined file.
++      - Spoof the output of /proc/bootconfig (gki) or /proc/cmdline (non-gki) with a user-defined file.
 +      - Effective on all processes.
 +
 +config KSU_SUSFS_OPEN_REDIRECT
@@ -150,84 +150,6 @@ index 67f177f..a569a94 100644
 +endmenu
 +
  endmenu
-diff --git a/kernel/Makefile b/kernel/Makefile
-index 732ba2d..a3be78b 100644
---- a/kernel/Makefile
-+++ b/kernel/Makefile
-@@ -51,4 +51,73 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
- ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
- ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
- 
-+ifndef KSU_EXPECTED_MAGIC_SIZE
-+KSU_EXPECTED_MAGIC_SIZE := 384
-+endif
-+ifndef KSU_EXPECTED_MAGIC_HASH
-+KSU_EXPECTED_MAGIC_HASH := 7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4
-+endif
-+$(info -- KernelSU with Magic Mount: https://github.com/5ec1cff/KernelSU)
-+$(info -- KernelSU Magic Mount Manager signature size: $(KSU_EXPECTED_MAGIC_SIZE))
-+$(info -- KernelSU Magic Mount Manager signature hash: $(KSU_EXPECTED_MAGIC_HASH))
-+$(info -- If you are using source from 5ec1cff, make sure to enable KSU_SUSFS_HAS_MAGIC_MOUNT)
-+ccflags-y += -DEXPECTED_MAGIC_SIZE=$(KSU_EXPECTED_MAGIC_SIZE)
-+ccflags-y += -DEXPECTED_MAGIC_HASH=\"$(KSU_EXPECTED_MAGIC_HASH)\"
-+
-+ifeq ($(shell test -e $(srctree)/fs/susfs.c; echo $$?),0)
-+$(eval SUSFS_VERSION=$(shell cat $(srctree)/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g'))
-+$(info -- SUSFS_VERSION: $(SUSFS_VERSION))
-+ifdef KSU_SUSFS
-+ccflags-y += -DKSU_SUSFS
-+endif
-+ifdef KSU_SUSFS_HAS_MAGIC_MOUNT
-+ccflags-y += -DKSU_SUSFS_HAS_MAGIC_MOUNT
-+endif
-+ifdef KSU_SUSFS_SUS_PATH
-+ccflags-y += -DKSU_SUSFS_SUS_PATH
-+endif
-+ifdef KSU_SUSFS_SUS_MOUNT
-+ccflags-y += -DKSU_SUSFS_SUS_MOUNT
-+endif
-+ifdef KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
-+ccflags-y += -DKSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
-+endif
-+ifdef KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
-+ccflags-y += -DKSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
-+endif
-+ifdef KSU_SUSFS_SUS_KSTAT
-+ccflags-y += -DKSU_SUSFS_SUS_KSTAT
-+endif
-+ifdef KSU_SUSFS_SUS_OVERLAYFS
-+ccflags-y += -DKSU_SUSFS_SUS_OVERLAYFS
-+endif
-+ifdef KSU_SUSFS_TRY_UMOUNT
-+ccflags-y += -DKSU_SUSFS_TRY_UMOUNT
-+endif
-+ifdef KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
-+ccflags-y += -DKSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
-+endif
-+ifdef KSU_SUSFS_SPOOF_UNAME
-+ccflags-y += -DKSU_SUSFS_SPOOF_UNAME
-+endif
-+ifdef KSU_SUSFS_ENABLE_LOG
-+ccflags-y += -DKSU_SUSFS_ENABLE_LOG
-+endif
-+ifdef KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
-+ccflags-y += -DKSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
-+endif
-+ifdef KSU_SUSFS_SPOOF_BOOTCONFIG
-+ccflags-y += -DKSU_SUSFS_SPOOF_BOOTCONFIG
-+endif
-+ifdef KSU_SUSFS_OPEN_REDIRECT
-+ccflags-y += -DKSU_SUSFS_OPEN_REDIRECT
-+endif
-+ifdef KSU_SUSFS_SUS_SU
-+ccflags-y += -DKSU_SUSFS_SUS_SU
-+endif
-+else
-+$(info -- You have not integrate susfs in your kernel.)
-+$(info -- Read: https://gitlab.com/simonpunk/susfs4ksu)
-+endif
-+
- # Keep a new line here!! Because someone may append config
 diff --git a/kernel/allowlist.c b/kernel/allowlist.c
 index 9daceef..54ced73 100644
 --- a/kernel/allowlist.c
@@ -278,10 +200,10 @@ index 9daceef..54ced73 100644
  	return ksu_queue_work(&ksu_save_work);
  }
 diff --git a/kernel/apk_sign.c b/kernel/apk_sign.c
-index ba8b73f..1e4d1c1 100644
+index ba8b73f..6c3c844 100644
 --- a/kernel/apk_sign.c
 +++ b/kernel/apk_sign.c
-@@ -314,7 +314,12 @@ module_param_cb(ksu_debug_manager_uid, &expected_size_ops,
+@@ -314,7 +314,13 @@ module_param_cb(ksu_debug_manager_uid, &expected_size_ops,
  
  #endif
  
@@ -289,8 +211,9 @@ index ba8b73f..1e4d1c1 100644
 +bool ksu_is_manager_apk(char *path)
  {
 +#ifdef CONFIG_KSU_SUSFS
-+	return (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH) ||
-+			check_v2_signature(path, EXPECTED_MAGIC_SIZE, EXPECTED_MAGIC_HASH));
++	return (check_v2_signature(path, EXPECTED_LEGACY_SIZE, EXPECTED_LEGACY_HASH) ||
++			check_v2_signature(path, EXPECTED_MAGIC_SIZE, EXPECTED_MAGIC_HASH) ||
++			check_v2_signature(path, EXPECTED_NEXT_SIZE, EXPECTED_NEXT_HASH));
 +#else
  	return check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH);
 +#endif
@@ -309,7 +232,7 @@ index bed501c..e02aa51 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a..cc975f5 100644
+index 913867a..8760ad3 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -419,7 +342,7 @@ index 913867a..cc975f5 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("sepolicy: prctl reply error\n");
  			}
-@@ -372,6 +393,335 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -372,6 +393,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -565,24 +488,24 @@ index 913867a..cc975f5 100644
 +			return 0;
 +		}
 +#endif //#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
-+		if (arg2 == CMD_SUSFS_SET_BOOTCONFIG) {
++#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
++		if (arg2 == CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG) {
 +			int error = 0;
-+			if (!ksu_access_ok((void __user*)arg3, SUSFS_FAKE_BOOT_CONFIG_SIZE)) {
-+				pr_err("susfs: CMD_SUSFS_SET_BOOTCONFIG -> arg3 is not accessible\n");
++			if (!ksu_access_ok((void __user*)arg3, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE)) {
++				pr_err("susfs: CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG -> arg3 is not accessible\n");
 +				return 0;
 +			}
 +			if (!ksu_access_ok((void __user*)arg5, sizeof(error))) {
-+				pr_err("susfs: CMD_SUSFS_SET_BOOTCONFIG -> arg5 is not accessible\n");
++				pr_err("susfs: CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG -> arg5 is not accessible\n");
 +				return 0;
 +			}
-+			error = susfs_set_bootconfig((char __user*)arg3);
-+			pr_info("susfs: CMD_SUSFS_SET_BOOTCONFIG -> ret: %d\n", error);
++			error = susfs_set_cmdline_or_bootconfig((char __user*)arg3);
++			pr_info("susfs: CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG -> ret: %d\n", error);
 +			if (copy_to_user((void __user*)arg5, &error, sizeof(error)))
 +				pr_info("susfs: copy_to_user() failed\n");
 +			return 0;
 +		}
-+#endif //#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
++#endif //#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +		if (arg2 == CMD_SUSFS_ADD_OPEN_REDIRECT) {
 +			int error = 0;
@@ -681,7 +604,7 @@ index 913867a..cc975f5 100644
 +#ifdef CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
 +			enabled_features |= (1 << 10);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
++#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +			enabled_features |= (1 << 11);
 +#endif
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
@@ -689,6 +612,9 @@ index 913867a..cc975f5 100644
 +#endif
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +			enabled_features |= (1 << 13);
++#endif
++#ifdef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
++			enabled_features |= (1 << 14);
 +#endif
 +			error = copy_to_user((void __user*)arg3, (void*)&enabled_features, sizeof(enabled_features));
 +			pr_info("susfs: CMD_SUSFS_SHOW_ENABLED_FEATURES -> ret: %d\n", error);
@@ -755,7 +681,7 @@ index 913867a..cc975f5 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -454,7 +804,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -454,7 +807,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -767,7 +693,7 @@ index 913867a..cc975f5 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -475,6 +829,19 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -475,6 +832,19 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
  	ksu_umount_mnt(&path, flags);
  }
  
@@ -787,7 +713,7 @@ index 913867a..cc975f5 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -494,6 +861,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -494,6 +864,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -805,7 +731,7 @@ index 913867a..cc975f5 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -503,7 +881,16 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -503,7 +884,16 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -822,7 +748,7 @@ index 913867a..cc975f5 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -512,31 +899,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,31 +902,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
@@ -1297,7 +1223,7 @@ index 88f1e7d..36edcc7 100644
  u32 ksu_get_devpts_sid();
  
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 47a673c..3a3c857 100644
+index 47a673c..ffa3642 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -20,7 +20,7 @@
@@ -1309,7 +1235,39 @@ index 47a673c..3a3c857 100644
  
  static void __user *userspace_stack_buffer(const void *d, size_t len)
  {
-@@ -132,7 +132,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+@@ -66,6 +66,31 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
+ 	return 0;
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) && defined(CONFIG_KSU_SUSFS_SUS_SU)
++struct filename* susfs_ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags) {
++	// const char sh[] = SH_PATH;
++	const char su[] = SU_PATH;
++	struct filename *name = getname_flags(*filename_user, getname_statx_lookup_flags(*flags), NULL);
++
++	if (unlikely(IS_ERR(name) || name->name == NULL)) {
++		return name;
++	}
++
++	if (!ksu_is_allow_uid(current_uid().val)) {
++		return name;
++	}
++
++	if (likely(memcmp(name->name, su, sizeof(su)))) {
++		return name;
++	}
++
++	const char sh[] = SH_PATH;
++	pr_info("vfs_fstatat su->sh!\n");
++	memcpy((void *)name->name, sh, sizeof(sh));
++	return name;
++}
++#endif
++
+ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
+ {
+ 	// const char sh[] = SH_PATH;
+@@ -132,7 +157,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
  	pr_info("do_execveat_common su found\n");
  	memcpy((void *)filename->name, sh, sizeof(sh));
  
@@ -1318,7 +1276,7 @@ index 47a673c..3a3c857 100644
  
  	return 0;
  }
-@@ -159,7 +159,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
+@@ -159,7 +184,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
  	pr_info("sys_execve su found\n");
  	*filename_user = ksud_user_path();
  
@@ -1327,7 +1285,7 @@ index 47a673c..3a3c857 100644
  
  	return 0;
  }
-@@ -235,3 +235,30 @@ void ksu_sucompat_exit()
+@@ -235,3 +260,30 @@ void ksu_sucompat_exit()
  	unregister_kprobe(&faccessat_kp);
  #endif
  }
