@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f..9f7a587 100644
+index 67f177f4..9f7a5878 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,147 @@ config KSU_DEBUG
@@ -151,32 +151,10 @@ index 67f177f..9f7a587 100644
 +
  endmenu
 diff --git a/kernel/Makefile b/kernel/Makefile
-index 732ba2d..1b6ef7e 100644
+index 9fec3ef3..e2234a36 100644
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
-@@ -26,15 +26,18 @@ $(info -- KernelSU version: $(KSU_VERSION))
- ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
- else # If there is no .git file, the default version will be passed.
- $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git submodule!")
--ccflags-y += -DKSU_VERSION=16
-+#ccflags-y += -DKSU_VERSION=16
-+# Else hardcode the latest KSU_VERSION from https://github.com/tiann/KernelSU/tree/main
-+# And it will be updated over time accordingly
-+ccflags-y += -DKSU_VERSION=11986
- endif
- 
- ifndef KSU_EXPECTED_SIZE
--KSU_EXPECTED_SIZE := 384
-+KSU_EXPECTED_SIZE := 0x033b
- endif
- 
- ifndef KSU_EXPECTED_HASH
--KSU_EXPECTED_HASH := 7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4
-+KSU_EXPECTED_HASH := c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6
- endif
- 
- ifdef KSU_MANAGER_PACKAGE
-@@ -51,4 +54,58 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
+@@ -51,4 +51,58 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
  ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
  ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
  
@@ -238,7 +216,7 @@ index 732ba2d..1b6ef7e 100644
 +# Keep a new line here!! Because someone may append config
 \ No newline at end of file
 diff --git a/kernel/allowlist.c b/kernel/allowlist.c
-index 9daceef..54ced73 100644
+index 9daceef2..54ced73d 100644
 --- a/kernel/allowlist.c
 +++ b/kernel/allowlist.c
 @@ -90,7 +90,7 @@ static uint8_t allow_list_bitmap[PAGE_SIZE] __read_mostly __aligned(PAGE_SIZE);
@@ -287,7 +265,7 @@ index 9daceef..54ced73 100644
  	return ksu_queue_work(&ksu_save_work);
  }
 diff --git a/kernel/apk_sign.c b/kernel/apk_sign.c
-index ba8b73f..9af2828 100644
+index ba8b73f2..9af28285 100644
 --- a/kernel/apk_sign.c
 +++ b/kernel/apk_sign.c
 @@ -314,7 +314,12 @@ module_param_cb(ksu_debug_manager_uid, &expected_size_ops,
@@ -306,7 +284,7 @@ index ba8b73f..9af2828 100644
  }
 \ No newline at end of file
 diff --git a/kernel/apk_sign.h b/kernel/apk_sign.h
-index bed501c..e02aa51 100644
+index bed501c4..e02aa514 100644
 --- a/kernel/apk_sign.h
 +++ b/kernel/apk_sign.h
 @@ -3,6 +3,6 @@
@@ -318,7 +296,7 @@ index bed501c..e02aa51 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a..8760ad3 100644
+index 913867a5..8760ad36 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -882,7 +860,7 @@ index 913867a..8760ad3 100644
  	return 0;
  }
 diff --git a/kernel/kernel_compat.c b/kernel/kernel_compat.c
-index d4ee546..a11f262 100644
+index d4ee546d..a11f2628 100644
 --- a/kernel/kernel_compat.c
 +++ b/kernel/kernel_compat.c
 @@ -48,6 +48,16 @@ void ksu_android_ns_fs_check()
@@ -903,7 +881,7 @@ index d4ee546..a11f262 100644
  {
  	// switch mnt_ns even if current is not wq_worker, to ensure what we open is the correct file in android mnt_ns, rather than user created mnt_ns
 diff --git a/kernel/kernel_compat.h b/kernel/kernel_compat.h
-index 4bcfbf3..5d5fcf3 100644
+index 4bcfbf38..5d5fcf35 100644
 --- a/kernel/kernel_compat.h
 +++ b/kernel/kernel_compat.h
 @@ -25,6 +25,7 @@ extern long ksu_strncpy_from_user_nofault(char *dst,
@@ -915,7 +893,7 @@ index 4bcfbf3..5d5fcf3 100644
  					 umode_t mode);
  extern ssize_t ksu_kernel_read_compat(struct file *p, void *buf, size_t count,
 diff --git a/kernel/ksu.c b/kernel/ksu.c
-index d517c3b..f3e1300 100644
+index d517c3b5..f3e13004 100644
 --- a/kernel/ksu.c
 +++ b/kernel/ksu.c
 @@ -11,6 +11,10 @@
@@ -970,7 +948,7 @@ index d517c3b..f3e1300 100644
  MODULE_LICENSE("GPL");
  MODULE_AUTHOR("weishu");
 diff --git a/kernel/ksud.c b/kernel/ksud.c
-index 98fee10..a2362f2 100644
+index 98fee107..a2362f26 100644
 --- a/kernel/ksud.c
 +++ b/kernel/ksud.c
 @@ -57,17 +57,24 @@ bool ksu_execveat_hook __read_mostly = true;
@@ -1049,7 +1027,7 @@ index 98fee10..a2362f2 100644
  
  static void stop_input_hook()
 diff --git a/kernel/ksud.h b/kernel/ksud.h
-index cc2df24..26974c9 100644
+index cc2df243..26974c9c 100644
 --- a/kernel/ksud.h
 +++ b/kernel/ksud.h
 @@ -5,7 +5,7 @@
@@ -1062,7 +1040,7 @@ index cc2df24..26974c9 100644
  bool ksu_is_safe_mode(void);
  
 diff --git a/kernel/manager.h b/kernel/manager.h
-index be5bbce..93fa267 100644
+index be5bbced..93fa2678 100644
 --- a/kernel/manager.h
 +++ b/kernel/manager.h
 @@ -13,7 +13,7 @@ static inline bool ksu_is_manager_uid_valid()
@@ -1075,7 +1053,7 @@ index be5bbce..93fa267 100644
  	return unlikely(ksu_manager_uid == current_uid().val);
  }
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
-index b4e6eae..5f15d3a 100644
+index b4e6eae0..5f15d3a3 100644
 --- a/kernel/selinux/rules.c
 +++ b/kernel/selinux/rules.c
 @@ -24,9 +24,9 @@ static struct policydb *get_policydb(void)
@@ -1126,7 +1104,7 @@ index b4e6eae..5f15d3a 100644
  	}
  
 diff --git a/kernel/selinux/selinux.c b/kernel/selinux/selinux.c
-index 17a25da..5ecee39 100644
+index 17a25dae..5ecee39a 100644
 --- a/kernel/selinux/selinux.c
 +++ b/kernel/selinux/selinux.c
 @@ -5,6 +5,14 @@
@@ -1273,7 +1251,7 @@ index 17a25da..5ecee39 100644
  
  u32 ksu_get_devpts_sid()
 diff --git a/kernel/selinux/selinux.h b/kernel/selinux/selinux.h
-index 88f1e7d..36edcc7 100644
+index 88f1e7d3..36edcc7f 100644
 --- a/kernel/selinux/selinux.h
 +++ b/kernel/selinux/selinux.h
 @@ -4,17 +4,29 @@
@@ -1313,7 +1291,7 @@ index 88f1e7d..36edcc7 100644
  u32 ksu_get_devpts_sid();
  
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 47a673c..ffa3642 100644
+index 966cbf8f..f48501cd 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -20,7 +20,7 @@
@@ -1375,8 +1353,8 @@ index 47a673c..ffa3642 100644
  
  	return 0;
  }
-@@ -235,3 +260,30 @@ void ksu_sucompat_exit()
- 	unregister_kprobe(&faccessat_kp);
+@@ -278,3 +303,30 @@ void ksu_sucompat_exit()
+ 	unregister_kprobe(&pts_unix98_lookup_kp);
  #endif
  }
 +
@@ -1407,7 +1385,7 @@ index 47a673c..ffa3642 100644
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +
 diff --git a/kernel/throne_tracker.c b/kernel/throne_tracker.c
-index d7c1dae..b30f318 100644
+index d7c1dae1..b30f3182 100644
 --- a/kernel/throne_tracker.c
 +++ b/kernel/throne_tracker.c
 @@ -178,7 +178,7 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
@@ -1429,7 +1407,7 @@ index d7c1dae..b30f318 100644
  	struct file *fp =
  		ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
 diff --git a/kernel/throne_tracker.h b/kernel/throne_tracker.h
-index 5d7f477..428c737 100644
+index 5d7f4770..428c737d 100644
 --- a/kernel/throne_tracker.h
 +++ b/kernel/throne_tracker.h
 @@ -5,6 +5,6 @@ void ksu_throne_tracker_init();
