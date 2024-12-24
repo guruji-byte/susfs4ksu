@@ -624,37 +624,37 @@ void susfs_set_log(bool enabled) {
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 
-/* spoof_bootconfig */
-#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
-static char *fake_boot_config = NULL;
-int susfs_set_bootconfig(char* __user user_fake_boot_config) {
+/* spoof_cmdline_or_bootconfig */
+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+static char *fake_cmdline_or_bootconfig = NULL;
+int susfs_set_cmdline_or_bootconfig(char* __user user_fake_cmdline_or_bootconfig) {
 	int res;
 
-	if (!fake_boot_config) {
+	if (!fake_cmdline_or_bootconfig) {
 		// 4096 is enough I guess
-		fake_boot_config = kmalloc(SUSFS_FAKE_BOOT_CONFIG_SIZE, GFP_KERNEL);
-		if (!fake_boot_config) {
+		fake_cmdline_or_bootconfig = kmalloc(SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE, GFP_KERNEL);
+		if (!fake_cmdline_or_bootconfig) {
 			SUSFS_LOGE("no enough memory\n");
 			return -ENOMEM;
 		}
 	}
 
 	spin_lock(&susfs_spin_lock);
-	memset(fake_boot_config, 0, SUSFS_FAKE_BOOT_CONFIG_SIZE);
-	res = strncpy_from_user(fake_boot_config, user_fake_boot_config, SUSFS_FAKE_BOOT_CONFIG_SIZE-1);
+	memset(fake_cmdline_or_bootconfig, 0, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE);
+	res = strncpy_from_user(fake_cmdline_or_bootconfig, user_fake_cmdline_or_bootconfig, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE-1);
 	spin_unlock(&susfs_spin_lock);
 
 	if (res > 0) {
-		SUSFS_LOGI("fake_boot_config is set, length of string: %u\n", strlen(fake_boot_config));
+		SUSFS_LOGI("fake_cmdline_or_bootconfig is set, length of string: %u\n", strlen(fake_cmdline_or_bootconfig));
 		return 0;
 	}
-	SUSFS_LOGI("failed setting fake_boot_config\n");
+	SUSFS_LOGI("failed setting fake_cmdline_or_bootconfig\n");
 	return res;
 }
 
-int susfs_spoof_bootconfig(struct seq_file *m) {
-	if (fake_boot_config != NULL) {
-		seq_puts(m, fake_boot_config);
+int susfs_spoof_cmdline_or_bootconfig(struct seq_file *m) {
+	if (fake_cmdline_or_bootconfig != NULL) {
+		seq_puts(m, fake_cmdline_or_bootconfig);
 		return 0;
 	}
 	return 1;
