@@ -115,7 +115,7 @@ sed -i 's/^androidboot.vbmeta.device_state.*$/androidboot.vbmeta.device_state = 
 sed -i 's/^androidboot.verifiedbootstate.*$/androidboot.verifiedbootstate = "green"/g' ${FAKE_BOOTCONFIG}
 sed -i '/androidboot.verifiedbooterror/d' ${FAKE_BOOTCONFIG}
 sed -i '/androidboot.verifyerrorpart/d' ${FAKE_BOOTCONFIG}
-${SUSFS_BIN} set_bootconfig /data/adb/modules/susfs4ksu/fake_bootconfig.txt
+${SUSFS_BIN} set_cmdline_or_bootconfig /data/adb/modules/susfs4ksu/fake_bootconfig.txt
 EOF
 
 # /proc/cmdline #
@@ -124,7 +124,7 @@ FAKE_PROC_CMDLINE_FILE=${MODDIR}/fake_proc_cmdline.txt
 cat /proc/cmdline > ${FAKE_PROC_CMDLINE_FILE}
 sed -i 's/androidboot.verifiedbootstate=orange/androidboot.verifiedbootstate=green/g' ${FAKE_PROC_CMDLINE_FILE}
 sed -i 's/androidboot.vbmeta.device_state=unlocked/androidboot.vbmeta.device_state=locked/g' ${FAKE_PROC_CMDLINE_FILE}
-${SUSFS_BIN} set_proc_cmdline ${FAKE_PROC_CMDLINE_FILE}
+${SUSFS_BIN} set_cmdline_or_bootconfig ${FAKE_PROC_CMDLINE_FILE}
 EOF
 
 #### Enable sus_su (Deprecated, do NOT use it) ####
