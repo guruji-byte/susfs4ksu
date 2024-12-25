@@ -42,14 +42,14 @@ index cb588cee9669..d729ed0ad0dd 100644
  		if (dentry->d_parent != parent)
  			goto next;
 diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
-index 4f25015aa534..643b177e6289 100644
+index 4f25015aa534..555e4cb31e65 100644
 --- a/fs/devpts/inode.c
 +++ b/fs/devpts/inode.c
 @@ -596,6 +596,11 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
  	return dentry;
  }
  
-+#if defined(CONFIG_KSU_SUSFS_SUS_SU) && !defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
++#if defined(CONFIG_KSU_SUSFS_SUS_SU)
 +extern bool ksu_devpts_hook;
 +extern int ksu_handle_devpts(struct inode*);
 +#endif
@@ -61,7 +61,7 @@ index 4f25015aa534..643b177e6289 100644
   */
  void *devpts_get_priv(struct dentry *dentry)
  {
-+#if defined(CONFIG_KSU_SUSFS_SUS_SU) && !defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
++#if defined(CONFIG_KSU_SUSFS_SUS_SU)
 +	if (likely(ksu_devpts_hook)) {
 +		ksu_handle_devpts(dentry->d_inode);
 +	}
