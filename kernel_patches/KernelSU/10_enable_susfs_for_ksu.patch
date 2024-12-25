@@ -956,17 +956,15 @@ index d517c3b5..f3e13004 100644
  MODULE_LICENSE("GPL");
  MODULE_AUTHOR("weishu");
 diff --git a/kernel/ksud.c b/kernel/ksud.c
-index 98fee107..a2362f26 100644
+index 98fee107..ee382749 100644
 --- a/kernel/ksud.c
 +++ b/kernel/ksud.c
-@@ -57,17 +57,24 @@ bool ksu_execveat_hook __read_mostly = true;
+@@ -57,17 +57,22 @@ bool ksu_execveat_hook __read_mostly = true;
  bool ksu_input_hook __read_mostly = true;
  #endif
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+#ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +bool ksu_devpts_hook = false;
-+#endif // #ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +bool susfs_is_sus_su_ready = false;
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +
@@ -987,7 +985,7 @@ index 98fee107..a2362f26 100644
  	ksu_load_allow_list();
  	// sanity check, this may influence the performance
  	stop_input_hook();
-@@ -190,7 +197,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -190,7 +195,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  					first_arg);
  				if (!strcmp(first_arg, "second_stage")) {
  					pr_info("/system/bin/init second_stage executed\n");
@@ -996,7 +994,7 @@ index 98fee107..a2362f26 100644
  					init_second_stage_executed = true;
  					ksu_android_ns_fs_check();
  				}
-@@ -214,7 +221,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -214,7 +219,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  				pr_info("/init first arg: %s\n", first_arg);
  				if (!strcmp(first_arg, "--second-stage")) {
  					pr_info("/init second_stage executed\n");
@@ -1005,7 +1003,7 @@ index 98fee107..a2362f26 100644
  					init_second_stage_executed = true;
  					ksu_android_ns_fs_check();
  				}
-@@ -251,7 +258,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -251,7 +256,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  					    (!strcmp(env_value, "1") ||
  					     !strcmp(env_value, "true"))) {
  						pr_info("/init second_stage executed\n");
@@ -1014,7 +1012,7 @@ index 98fee107..a2362f26 100644
  						init_second_stage_executed =
  							true;
  						ksu_android_ns_fs_check();
-@@ -266,7 +273,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -266,7 +271,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  		first_app_process = false;
  		pr_info("exec app_process, /data prepared, second_stage: %d\n",
  			init_second_stage_executed);
@@ -1023,7 +1021,7 @@ index 98fee107..a2362f26 100644
  		stop_execve_hook();
  	}
  
-@@ -557,6 +564,10 @@ static void stop_execve_hook()
+@@ -557,6 +562,10 @@ static void stop_execve_hook()
  	ksu_execveat_hook = false;
  	pr_info("stop execve_hook\n");
  #endif
@@ -1061,7 +1059,7 @@ index be5bbced..93fa2678 100644
  	return unlikely(ksu_manager_uid == current_uid().val);
  }
 diff --git a/kernel/selinux/rules.c b/kernel/selinux/rules.c
-index b4e6eae0..29444ca2 100644
+index b4e6eae0..9a6b91dc 100644
 --- a/kernel/selinux/rules.c
 +++ b/kernel/selinux/rules.c
 @@ -24,9 +24,9 @@ static struct policydb *get_policydb(void)
@@ -1076,17 +1074,11 @@ index b4e6eae0..29444ca2 100644
  		pr_info("SELinux permissive or disabled, apply rules!\n");
  	}
  
-@@ -122,6 +122,20 @@ void apply_kernelsu_rules()
+@@ -122,6 +122,14 @@ void apply_kernelsu_rules()
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
      ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
  
 +#ifdef CONFIG_KSU_SUSFS
-+#ifdef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
-+	// https://github.com/5ec1cff/KernelSU/commit/2cbda5f963fcdb10dc570f49453f3a810ef57d35
-+	// https://github.com/topjohnwu/Magisk/blob/c0899f2939a3b27a6173952f2b150b0eb04148c7/native/src/sepolicy/rules.rs#L133
-+	ksu_deny(db, "init", "adb_data_file", "dir", "search");
-+	ksu_deny(db, "vendor_init", "adb_data_file", "dir", "search");
-+#endif // #ifdef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +	// Allow umount in zygote process without installing zygisk
 +	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
 +	susfs_set_init_sid();
@@ -1097,7 +1089,7 @@ index b4e6eae0..29444ca2 100644
  	rcu_read_unlock();
  }
  
-@@ -182,13 +196,13 @@ static void reset_avc_cache()
+@@ -182,13 +190,13 @@ static void reset_avc_cache()
  	selinux_xfrm_notify_policyload();
  }
  
@@ -1301,7 +1293,7 @@ index 88f1e7d3..36edcc7f 100644
  u32 ksu_get_devpts_sid();
  
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 966cbf8f..f48501cd 100644
+index 966cbf8f..497367c7 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -20,7 +20,7 @@
@@ -1363,34 +1355,28 @@ index 966cbf8f..f48501cd 100644
  
  	return 0;
  }
-@@ -278,3 +303,30 @@ void ksu_sucompat_exit()
+@@ -278,3 +303,24 @@ void ksu_sucompat_exit()
  	unregister_kprobe(&pts_unix98_lookup_kp);
  #endif
  }
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+#ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +extern bool ksu_devpts_hook;
-+#endif // #ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +
 +void ksu_susfs_disable_sus_su(void) {
 +	enable_kprobe(&execve_kp);
 +	enable_kprobe(&newfstatat_kp);
 +	enable_kprobe(&faccessat_kp);
-+#ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +	enable_kprobe(&pts_unix98_lookup_kp);
 +	ksu_devpts_hook = false;
-+#endif // #ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +}
 +
 +void ksu_susfs_enable_sus_su(void) {
 +	disable_kprobe(&execve_kp);
 +	disable_kprobe(&newfstatat_kp);
 +	disable_kprobe(&faccessat_kp);
-+#ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +	disable_kprobe(&pts_unix98_lookup_kp);
 +	ksu_devpts_hook = true;
-+#endif // #ifndef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
 +}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +
