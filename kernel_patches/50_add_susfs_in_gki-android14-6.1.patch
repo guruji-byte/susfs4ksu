@@ -1048,29 +1048,24 @@ index 824bcc7b5dbc..68f2c96f03a1 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 380cee197118..ddbdda8c3bc5 100644
+index 380cee197118..892870dfc50a 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
-@@ -1298,12 +1298,23 @@ static int override_release(char __user *release, size_t len)
+@@ -1298,12 +1298,18 @@ static int override_release(char __user *release, size_t len)
  	return ret;
  }
  
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+extern int susfs_spoof_uname(struct new_utsname* tmp);
++extern void susfs_spoof_uname(struct new_utsname* tmp);
 +#endif
-+
  SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
  {
  	struct new_utsname tmp;
  
  	down_read(&uts_sem);
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+	if (likely(!susfs_spoof_uname(&tmp)))
-+		goto bypass_orig_flow;
-+#endif
  	memcpy(&tmp, utsname(), sizeof(tmp));
 +#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+bypass_orig_flow:
++	susfs_spoof_uname(&tmp);
 +#endif
  	up_read(&uts_sem);
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
