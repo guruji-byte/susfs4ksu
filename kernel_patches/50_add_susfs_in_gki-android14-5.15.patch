@@ -424,7 +424,7 @@ index a3922d96fac9..13dae0c16152 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..b40432f45234 100644
+index 2bef741f2092..d73814648dd2 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -646,7 +646,7 @@ index 2bef741f2092..b40432f45234 100644
  	return ret;
  }
  
-@@ -4649,3 +4781,24 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4649,3 +4781,37 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -669,6 +669,19 @@ index 2bef741f2092..b40432f45234 100644
 +	// Unlock the namespace
 +	namespace_unlock();
 +	susfs_try_umount_all(current_uid().val);
++}
++#endif
++#ifdef CONFIG_KSU_SUSFS
++bool susfs_is_mnt_devname_ksu(struct path *path) {
++	struct mount *mnt;
++
++	if (path && path->mnt) {
++		mnt = real_mount(path->mnt);
++		if (mnt && mnt->mnt_devname && !strcmp(mnt->mnt_devname, "KSU")) {
++			return true;
++		}
++	}
++	return false;
 +}
 +#endif
 \ No newline at end of file
@@ -1031,7 +1044,7 @@ index e0d9f77cf2d4..e2d41cc3d3ad 100644
  }
  
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 4b2ebf822f00..d3af351fffd9 100644
+index 4b2ebf822f00..0e0280de152d 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
 @@ -1297,12 +1297,18 @@ static int override_release(char __user *release, size_t len)
@@ -1053,33 +1066,3 @@ index 4b2ebf822f00..d3af351fffd9 100644
  	up_read(&uts_sem);
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
-@@ -1381,6 +1387,9 @@ SYSCALL_DEFINE2(sethostname, char __user *, name, int, len)
- 
- 		down_write(&uts_sem);
- 		u = utsname();
-+//#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+//		susfs_spoof_uname(u);
-+//#endif
- 		memcpy(u->nodename, tmp, len);
- 		memset(u->nodename + len, 0, sizeof(u->nodename) - len);
- 		errno = 0;
-@@ -1402,6 +1411,9 @@ SYSCALL_DEFINE2(gethostname, char __user *, name, int, len)
- 		return -EINVAL;
- 	down_read(&uts_sem);
- 	u = utsname();
-+//#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+//	susfs_spoof_uname(u);
-+//#endif
- 	i = 1 + strlen(u->nodename);
- 	if (i > len)
- 		i = len;
-@@ -1434,6 +1446,9 @@ SYSCALL_DEFINE2(setdomainname, char __user *, name, int, len)
- 
- 		down_write(&uts_sem);
- 		u = utsname();
-+//#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-+//		susfs_spoof_uname(u);
-+//#endif
- 		memcpy(u->domainname, tmp, len);
- 		memset(u->domainname + len, 0, sizeof(u->domainname) - len);
- 		errno = 0;
