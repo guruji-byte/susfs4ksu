@@ -435,7 +435,7 @@ index 893b1ec58c02..9e1bc8ace39c 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 1533550f7356..976c43ce8a05 100644
+index 1533550f7356..a298077f135c 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -36,6 +36,23 @@
@@ -657,7 +657,7 @@ index 1533550f7356..976c43ce8a05 100644
  	return ret;
  }
  
-@@ -4714,6 +4846,27 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4714,6 +4846,40 @@ const struct proc_ns_operations mntns_operations = {
  	.owner		= mntns_owner,
  };
  
@@ -679,6 +679,19 @@ index 1533550f7356..976c43ce8a05 100644
 +	// Unlock the namespace
 +	namespace_unlock();
 +	susfs_try_umount_all(current_uid().val);
++}
++#endif
++#ifdef CONFIG_KSU_SUSFS
++bool susfs_is_mnt_devname_ksu(struct path *path) {
++	struct mount *mnt;
++
++	if (path && path->mnt) {
++		mnt = real_mount(path->mnt);
++		if (mnt && mnt->mnt_devname && !strcmp(mnt->mnt_devname, "KSU")) {
++			return true;
++		}
++	}
++	return false;
 +}
 +#endif
 +
