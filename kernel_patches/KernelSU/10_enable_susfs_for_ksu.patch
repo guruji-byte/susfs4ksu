@@ -304,7 +304,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a5..34d8b6af 100644
+index 913867a5..16a49684 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -824,13 +824,14 @@ index 913867a5..34d8b6af 100644
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
+-
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	else {
-+		// if new uid is not root granted, then drop a payload to inidicate that sus_path will be effective on this uid
-+		new->user->android_kabi_reserved2 |= USER_STRUCT_KABI2_NON_ROOT_USER_APP_PROFILE;
++		task_lock(current);
++		current->susfs_task_state |= TASK_STRUCT_NON_ROOT_USER_APP_PROC;
++		task_unlock(current);
 +	}
 +#endif
- 
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +out_ksu_try_umount:
 +#endif
