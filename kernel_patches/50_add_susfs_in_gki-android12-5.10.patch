@@ -13,7 +13,7 @@ index c7851875b668..bb53b87308d6 100644
  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
  else
 diff --git a/fs/dcache.c b/fs/dcache.c
-index dd74ce596fd7..d219a97f58e0 100644
+index dd74ce596fd7..b8de7caf9dad 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -32,6 +32,9 @@
@@ -32,7 +32,7 @@ index dd74ce596fd7..d219a97f58e0 100644
  				continue;
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +				continue;
 +			}
 +#endif
@@ -44,7 +44,7 @@ index dd74ce596fd7..d219a97f58e0 100644
  			continue;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++		if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +			continue;
 +		}
 +#endif
@@ -163,7 +163,7 @@ index ca0dbce6d0a4..fe4b6e9ffb10 100644
  		return;
  
 diff --git a/fs/namei.c b/fs/namei.c
-index 8cea84ecbf56..26cb480c89ca 100644
+index 8cea84ecbf56..29c61814e76e 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,7 +39,9 @@
@@ -182,7 +182,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  static inline int may_follow_link(struct nameidata *nd, const struct inode *inode)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (nd->inode && unlikely(nd->inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (nd->inode && unlikely(nd->inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -195,7 +195,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	struct inode *inode = link->dentry->d_inode;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (inode && unlikely(inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -208,7 +208,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  				struct inode * const inode)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (unlikely(inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -231,7 +231,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		dentry = old;
  	}
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		if ((flags & (LOOKUP_CREATE | LOOKUP_EXCL))) {
 +			error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
 +			if (error) {
@@ -251,7 +251,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		}
  	}
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		dput(dentry);
 +		return ERR_PTR(-ENOENT);
 +	}
@@ -265,7 +265,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		}
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +		// we deal with sus sub path here
-+		if (nd->inode && unlikely(nd->inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++		if (nd->inode && unlikely(nd->inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +			return 0;
 +		}
 +#endif
@@ -277,7 +277,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	restore_nameidata();
  	putname(name);
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (!retval && path->dentry->d_inode && unlikely(path->dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (!retval && path->dentry->d_inode && unlikely(path->dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -289,7 +289,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		return -EPERM;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (unlikely(inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -308,7 +308,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	struct user_namespace *s_user_ns;
  	audit_inode_child(dir, child, AUDIT_TYPE_CHILD_CREATE);
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (child->d_inode && unlikely(child->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (child->d_inode && unlikely(child->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
 +		if (error) {
 +			return error;
@@ -325,7 +325,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		return -ENOENT;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	if (unlikely(inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		return -ENOENT;
 +	}
 +#endif
@@ -340,7 +340,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	int error;
 +
-+	if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +		error = inode_permission(dir->dentry->d_inode, MAY_WRITE | MAY_EXEC);
 +		if (error) {
 +			return error;
@@ -359,7 +359,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	if (dentry->d_inode) {
  		/* Cached positive dentry: will open in f_op->open */
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		if (unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++		if (unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +			dput(dentry);
 +			return ERR_PTR(-ENOENT);
 +		}
@@ -372,7 +372,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  		if (unlikely(create_error) && dentry == ERR_PTR(-ENOENT))
  			dentry = ERR_PTR(create_error);
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++		if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +			if (create_error) {
 +				dput(dentry);
 +				return ERR_PTR(create_error);
@@ -389,7 +389,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  			dput(dentry);
  			dentry = res;
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & 16777216) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++			if (dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 +				dput(dentry);
 +				return ERR_PTR(-ENOENT);
 +			}
@@ -422,7 +422,7 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	if (unlikely(filp == ERR_PTR(-ESTALE)))
  		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
 +#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-+	if (!IS_ERR(filp) && unlikely(filp->f_inode->i_state & 134217728) && current_uid().val < 2000) {
++	if (!IS_ERR(filp) && unlikely(filp->f_inode->i_state & INODE_STATE_OPEN_REDIRECT) && current_uid().val < 2000) {
 +		fake_pathname = susfs_get_redirected_path(filp->f_inode->i_ino);
 +		if (!IS_ERR(fake_pathname)) {
 +			restore_nameidata();
@@ -444,10 +444,17 @@ index 8cea84ecbf56..26cb480c89ca 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 5d5a426aa495..76d21b8a1309 100644
+index 5d5a426aa495..f14a06834502 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
-@@ -34,6 +34,23 @@
+@@ -30,10 +30,30 @@
+ #include <uapi/linux/mount.h>
+ #include <linux/fs_context.h>
+ #include <linux/shmem_fs.h>
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#include <linux/susfs_def.h>
++#endif
+ 
  #include "pnode.h"
  #include "internal.h"
  
@@ -471,15 +478,15 @@ index 5d5a426aa495..76d21b8a1309 100644
  /* Maximum number of mounts in a mount namespace */
  unsigned int sysctl_mount_max __read_mostly = 100000;
  
-@@ -114,9 +131,25 @@ static int mnt_alloc_id(struct mount *mnt)
+@@ -114,9 +134,25 @@ static int mnt_alloc_id(struct mount *mnt)
  
  static void mnt_free_id(struct mount *mnt)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	// If mnt->mnt.android_kabi_reserved4 is not zero, it means mnt->mnt_id is spoofed,
++	// If mnt->mnt.susfs_orig_mnt_id is not zero, it means mnt->mnt_id is spoofed,
 +	// so here we return the original mnt_id for being freed.
-+	if (unlikely(mnt->mnt.android_kabi_reserved4)) {
-+		ida_free(&mnt_id_ida, mnt->mnt.android_kabi_reserved4);
++	if (unlikely(mnt->mnt.susfs_orig_mnt_id)) {
++		ida_free(&mnt_id_ida, mnt->mnt.susfs_orig_mnt_id);
 +		return;
 +	}
 +#endif
@@ -497,7 +504,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  /*
   * Allocate a new peer group ID
   */
-@@ -135,6 +168,14 @@ static int mnt_alloc_group_id(struct mount *mnt)
+@@ -135,6 +171,14 @@ static int mnt_alloc_group_id(struct mount *mnt)
   */
  void mnt_release_group_id(struct mount *mnt)
  {
@@ -512,36 +519,36 @@ index 5d5a426aa495..76d21b8a1309 100644
  	ida_free(&mnt_group_ida, mnt->mnt_group_id);
  	mnt->mnt_group_id = 0;
  }
-@@ -966,6 +1007,13 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -966,6 +1010,13 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  	mnt->mnt_mountpoint	= mnt->mnt.mnt_root;
  	mnt->mnt_parent		= mnt;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	if (susfs_is_current_zygote_domain()) {
-+		mnt->mnt.android_kabi_reserved4 = mnt->mnt_id;
-+		mnt->mnt_id = current->android_kabi_reserved8++;
++		mnt->mnt.susfs_orig_mnt_id = mnt->mnt_id;
++		mnt->mnt_id = current->susfs_last_fake_mnt_id++;
 +	}
 +#endif
 +
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
  	unlock_mount_hash();
-@@ -1059,6 +1107,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1059,6 +1110,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	if (susfs_is_current_zygote_domain() && !(flag & CL_SUSFS_COPY_MNT_NS)) {
-+		mnt->mnt.android_kabi_reserved4 = mnt->mnt_id;
-+		mnt->mnt_id = current->android_kabi_reserved8++;
++		mnt->mnt.susfs_orig_mnt_id = mnt->mnt_id;
++		mnt->mnt_id = current->susfs_last_fake_mnt_id++;
 +	}
 +#endif
 +
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -2034,6 +2090,17 @@ static int invent_group_ids(struct mount *mnt, bool recurse)
+@@ -2034,6 +2093,17 @@ static int invent_group_ids(struct mount *mnt, bool recurse)
  {
  	struct mount *p;
  
@@ -559,7 +566,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  	for (p = mnt; p; p = recurse ? next_mnt(p, mnt) : NULL) {
  		if (!p->mnt_group_id && !IS_MNT_SHARED(p)) {
  			int err = mnt_alloc_group_id(p);
-@@ -2392,6 +2459,24 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2392,6 +2462,24 @@ static int do_loopback(struct path *path, const char *old_name,
  		umount_tree(mnt, UMOUNT_SYNC);
  		unlock_mount_hash();
  	}
@@ -584,7 +591,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3328,6 +3413,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3328,6 +3416,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -595,7 +602,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  
  	BUG_ON(!ns);
  
-@@ -3347,6 +3436,13 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3347,6 +3439,13 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -609,13 +616,13 @@ index 5d5a426aa495..76d21b8a1309 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3388,6 +3484,29 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3388,6 +3487,29 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	// current->android_kabi_reserved8 -> to record last valid fake mnt_id to zygote pid
-+	// q->mnt.android_kabi_reserved4 -> original mnt_id
++	// current->susfs_last_fake_mnt_id -> to record last valid fake mnt_id to zygote pid
++	// q->mnt.susfs_orig_mnt_id -> original mnt_id
 +	// q->mnt_id -> will be modified to the fake mnt_id
 +
 +	// Here We are only interested in processes of which original mnt namespace belongs to zygote 
@@ -623,23 +630,23 @@ index 5d5a426aa495..76d21b8a1309 100644
 +	if (is_zygote_pid) {
 +		last_entry_mnt_id = list_first_entry(&new_ns->list, struct mount, mnt_list)->mnt_id;
 +		list_for_each_entry(q, &new_ns->list, mnt_list) {
-+			if (unlikely(q->mnt.mnt_root->d_inode->i_state & 33554432)) {
++			if (unlikely(q->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT)) {
 +				continue;
 +			}
-+			q->mnt.android_kabi_reserved4 = q->mnt_id;
++			q->mnt.susfs_orig_mnt_id = q->mnt_id;
 +			q->mnt_id = last_entry_mnt_id++;
 +		}
 +	}
-+	// Assign the 'last_entry_mnt_id' to 'current->android_kabi_reserved8' for later use.
++	// Assign the 'last_entry_mnt_id' to 'current->susfs_last_fake_mnt_id' for later use.
 +	// should be fine here assuming zygote is forking/unsharing app in one single thread.
 +	// Or should we put a lock here?
-+	current->android_kabi_reserved8 = last_entry_mnt_id;
++	current->susfs_last_fake_mnt_id = last_entry_mnt_id;
 +#endif
 +
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3459,6 +3578,12 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+@@ -3459,6 +3581,12 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
  		goto out_data;
  
  	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
@@ -652,7 +659,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  
  	kfree(options);
  out_data:
-@@ -3664,6 +3789,12 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3664,6 +3792,12 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -665,7 +672,7 @@ index 5d5a426aa495..76d21b8a1309 100644
  	return ret;
  }
  
-@@ -4140,3 +4271,37 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4140,3 +4274,37 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -681,7 +688,7 @@ index 5d5a426aa495..76d21b8a1309 100644
 +	namespace_lock();
 +	list_for_each_entry(mnt, &mnt_ns->list, mnt_list) {
 +		// Change the sus mount to be private
-+		if (mnt->mnt.mnt_root->d_inode->i_state & 33554432) {
++		if (mnt->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) {
 +			change_mnt_propagation(mnt, MS_PRIVATE);
 +		}
 +	}
@@ -825,10 +832,20 @@ index 2e244ada1f97..239616b8a296 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index d92d1ee75930..2af657810db9 100644
+index d92d1ee75930..e6375add2553 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -318,6 +318,10 @@ static void show_vma_header_prefix(struct seq_file *m,
+@@ -20,6 +20,9 @@
+ #include <linux/shmem_fs.h>
+ #include <linux/uaccess.h>
+ #include <linux/pkeys.h>
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++#include <linux/susfs_def.h>
++#endif
+ 
+ #include <asm/elf.h>
+ #include <asm/tlb.h>
+@@ -318,6 +321,10 @@ static void show_vma_header_prefix(struct seq_file *m,
  	seq_putc(m, ' ');
  }
  
@@ -839,12 +856,12 @@ index d92d1ee75930..2af657810db9 100644
  static void
  show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  {
-@@ -332,8 +336,17 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+@@ -332,8 +339,17 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  
  	if (file) {
  		struct inode *inode = file_inode(vma->vm_file);
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+		if (unlikely(inode->i_state & 67108864)) {
++		if (unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
 +			susfs_sus_ino_for_show_map_vma(inode->i_ino, &dev, &ino);
 +			goto bypass_orig_flow;
 +		}
@@ -858,10 +875,19 @@ index d92d1ee75930..2af657810db9 100644
  	}
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index eafb75755fa3..362b2bf59b88 100644
+index eafb75755fa3..91beb33e4fa7 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
-@@ -18,6 +18,10 @@
+@@ -12,12 +12,19 @@
+ #include <linux/security.h>
+ #include <linux/fs_struct.h>
+ #include <linux/sched/task.h>
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#include <linux/susfs_def.h>
++#endif
+ 
+ #include "proc/internal.h" /* only for get_proc_task() in ->open() */
+ 
  #include "pnode.h"
  #include "internal.h"
  
@@ -872,35 +898,35 @@ index eafb75755fa3..362b2bf59b88 100644
  static __poll_t mounts_poll(struct file *file, poll_table *wait)
  {
  	struct seq_file *m = file->private_data;
-@@ -103,6 +107,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
+@@ -103,6 +110,11 @@ static int show_vfsmnt(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
 +
  	if (sb->s_op->show_devname) {
  		err = sb->s_op->show_devname(m, mnt_path.dentry);
  		if (err)
-@@ -137,6 +146,10 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
+@@ -137,6 +149,10 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
  	struct path mnt_path = { .dentry = mnt->mnt_root, .mnt = mnt };
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
  	seq_printf(m, "%i %i %u:%u ", r->mnt_id, r->mnt_parent->mnt_id,
  		   MAJOR(sb->s_dev), MINOR(sb->s_dev));
  	if (sb->s_op->show_path) {
-@@ -199,6 +212,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
+@@ -199,6 +215,11 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
  	struct super_block *sb = mnt_path.dentry->d_sb;
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & 33554432) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
 +
@@ -958,10 +984,20 @@ index 09e8ed7d4161..88a0d5c1d8c3 100644
  	if (unlikely(buf->error))
  		return buf->error;
 diff --git a/fs/stat.c b/fs/stat.c
-index c6a2e10983f8..55afd4327883 100644
+index c6a2e10983f8..6d5acc73eec6 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -24,6 +24,10 @@
+@@ -17,6 +17,9 @@
+ #include <linux/syscalls.h>
+ #include <linux/pagemap.h>
+ #include <linux/compat.h>
++#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
++#include <linux/susfs_def.h>
++#endif
+ 
+ #include <linux/uaccess.h>
+ #include <asm/unistd.h>
+@@ -24,6 +27,10 @@
  #include "internal.h"
  #include "mount.h"
  
@@ -972,12 +1008,12 @@ index c6a2e10983f8..55afd4327883 100644
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
   * @inode: Inode to use as the source
-@@ -35,6 +39,16 @@
+@@ -35,6 +42,16 @@
   */
  void generic_fillattr(struct inode *inode, struct kstat *stat)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (unlikely(inode->i_state & 67108864)) {
++	if (unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
 +		susfs_sus_ino_for_generic_fillattr(inode->i_ino, stat);
 +		stat->mode = inode->i_mode;
 +		stat->rdev = inode->i_rdev;
@@ -989,7 +1025,7 @@ index c6a2e10983f8..55afd4327883 100644
  	stat->dev = inode->i_sb->s_dev;
  	stat->ino = inode->i_ino;
  	stat->mode = inode->i_mode;
-@@ -171,6 +185,12 @@ int vfs_fstat(int fd, struct kstat *stat)
+@@ -171,6 +188,12 @@ int vfs_fstat(int fd, struct kstat *stat)
   *
   * 0 will be returned on success, and a -ve error code if unsuccessful.
   */
@@ -1002,7 +1038,7 @@ index c6a2e10983f8..55afd4327883 100644
  static int vfs_statx(int dfd, const char __user *filename, int flags,
  	      struct kstat *stat, u32 request_mask)
  {
-@@ -178,6 +198,12 @@ static int vfs_statx(int dfd, const char __user *filename, int flags,
+@@ -178,6 +201,12 @@ static int vfs_statx(int dfd, const char __user *filename, int flags,
  	unsigned lookup_flags = 0;
  	int error;
  
@@ -1055,11 +1091,27 @@ index d42b44dc0e49..553f995a04a1 100644
  	return error;
  }
  
+diff --git a/include/linux/mount.h b/include/linux/mount.h
+index 2f64e66f9c8c..5aaf9f40e4e3 100644
+--- a/include/linux/mount.h
++++ b/include/linux/mount.h
+@@ -77,7 +77,11 @@ struct vfsmount {
+ 	ANDROID_KABI_RESERVE(1);
+ 	ANDROID_KABI_RESERVE(2);
+ 	ANDROID_KABI_RESERVE(3);
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	ANDROID_KABI_USE(4, u64 susfs_orig_mnt_id);
++#else
+ 	ANDROID_KABI_RESERVE(4);
++#endif
+ } __randomize_layout;
+ 
+ struct file; /* forward dec */
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 331ec7988028..7840b1a8e877 100644
+index 331ec7988028..e22bbce40deb 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1383,7 +1383,11 @@ struct task_struct {
+@@ -1383,8 +1383,16 @@ struct task_struct {
  	ANDROID_KABI_RESERVE(4);
  	ANDROID_KABI_RESERVE(5);
  	ANDROID_KABI_RESERVE(6);
@@ -1068,9 +1120,14 @@ index 331ec7988028..7840b1a8e877 100644
 +#else
  	ANDROID_KABI_RESERVE(7);
 +#endif
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	ANDROID_KABI_USE(8, u64 susfs_last_fake_mnt_id);
++#else
  	ANDROID_KABI_RESERVE(8);
++#endif
  
  	/*
+ 	 * New fields for task_struct should be added above here, so that
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index 96505113b907..de70a3b01324 100644
 --- a/kernel/kallsyms.c
