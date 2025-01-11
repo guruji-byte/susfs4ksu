@@ -173,14 +173,14 @@ index 417ba66af4a3..92f21d60d957 100644
  		return;
  
 diff --git a/fs/namei.c b/fs/namei.c
-index 893b1ec58c02..03c20f37a478 100644
+index 893b1ec58c02..9331148834a5 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,6 +40,9 @@
  #include <linux/bitops.h>
  #include <linux/init_task.h>
  #include <linux/uaccess.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#if defined(CONFIG_KSU_SUSFS_SUS_PATH) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
 +#include <linux/susfs_def.h>
 +#endif
  
@@ -453,14 +453,14 @@ index 893b1ec58c02..03c20f37a478 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 1533550f7356..fd81759cfa16 100644
+index 1533550f7356..3302965fdaae 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -32,10 +32,30 @@
  #include <linux/fs_context.h>
  #include <linux/shmem_fs.h>
  #include <linux/mnt_idmapping.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_TRY_UMOUNT)
 +#include <linux/susfs_def.h>
 +#endif
  
