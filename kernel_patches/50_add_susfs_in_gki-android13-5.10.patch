@@ -162,14 +162,14 @@ index 4102cfec92b3..44833d2870b8 100644
  		return;
  
 diff --git a/fs/namei.c b/fs/namei.c
-index 8872a503699e..a760145b3bed 100644
+index 8872a503699e..ef405613991a 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
  #include <linux/bitops.h>
  #include <linux/init_task.h>
  #include <linux/uaccess.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++#if defined(CONFIG_KSU_SUSFS_SUS_PATH) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
 +#include <linux/susfs_def.h>
 +#endif
  
@@ -442,14 +442,14 @@ index 8872a503699e..a760145b3bed 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 6d1f11a6b290..c8a986fdfdd3 100644
+index 6d1f11a6b290..666b0839a5e1 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -30,10 +30,30 @@
  #include <uapi/linux/mount.h>
  #include <linux/fs_context.h>
  #include <linux/shmem_fs.h>
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_TRY_UMOUNT)
 +#include <linux/susfs_def.h>
 +#endif
  
@@ -933,32 +933,30 @@ index eafb75755fa3..91beb33e4fa7 100644
  	if (sb->s_op->show_devname) {
  		seq_puts(m, "device ");
 diff --git a/fs/readdir.c b/fs/readdir.c
-index 09e8ed7d4161..88a0d5c1d8c3 100644
+index 09e8ed7d4161..6d27edfeae1c 100644
 --- a/fs/readdir.c
 +++ b/fs/readdir.c
-@@ -21,7 +21,9 @@
+@@ -21,6 +21,9 @@
  #include <linux/unistd.h>
  #include <linux/compat.h>
  #include <linux/uaccess.h>
--
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +#include <linux/susfs_def.h>
 +#endif
+ 
  #include <asm/unaligned.h>
  
- /*
-@@ -36,7 +38,9 @@
+@@ -36,6 +39,9 @@
  	unsafe_copy_to_user(dst, src, len, label);		\
  } while (0)
  
--
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +extern int susfs_sus_ino_for_filldir64(unsigned long ino);
 +#endif
+ 
  int iterate_dir(struct file *file, struct dir_context *ctx)
  {
- 	struct inode *inode = file_inode(file);
-@@ -230,6 +234,11 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
+@@ -230,6 +236,11 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
  		sizeof(long));
  	int prev_reclen;
  
@@ -970,7 +968,7 @@ index 09e8ed7d4161..88a0d5c1d8c3 100644
  	buf->error = verify_dirent_name(name, namlen);
  	if (unlikely(buf->error))
  		return buf->error;
-@@ -317,6 +326,11 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
+@@ -317,6 +328,11 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
  		sizeof(u64));
  	int prev_reclen;
  
