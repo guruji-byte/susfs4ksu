@@ -10,21 +10,28 @@
 - The susfs kernel patches may differ for different kernel version or even on the same kernel version, you may need to create your own patches for your kernel.
 
 ## Patch Instruction (For GKI Kernel only and building from official google artifacts) ##
+**- Prerequisite -**
+1. All susfs patches are based on legcay KernelSU (the one from weishu), so you should clone his repo for a better patching result.
+2. SUSFS now supports AUTO_ADD features for Magick Mount KernelSU as long as you have `KSU_SUSFS_HAS_MAGIC_MOUNT` feature enabled, and so you can use Magic Mount KSU manager as well.
+
+**- Apply SUSFS patches -**
 1. Make sure you follow the offical KSU guild here to clone and build the kernel with KSU: `https://kernelsu.org/guide/how-to-build.html`, the kernel root directory should be `$KERNEL_REPO/common`, you should run script to clone KSU in `$KERNEL_REPO`
+2. Clone the SUSFS repo with a tag or release version, as they are more stable in general.
 2. Run `cp ./kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch $KERNEL_REPO/KernelSU/`
 3. Run `cp ./kernel_patches/50_add_susfs_in_kernel-<kernel_version>.patch $KERNEL_REPO/common/`
 4. Run `cp ./kernel_patches/fs/* $KERNEL_REPO/common/fs/`
 5. Run `cp ./kernel_patches/include/linux/* $KERNEL_REPO/common/include/linux/`
 6. Run `cd $KERNEL_REPO/KernelSU` and then `patch -p1 < 10_enable_susfs_for_ksu.patch`
 7. Run `cd $KERNEL_REPO/common` and then `patch -p1 < 50_add_susfs_in_kernel.patch`, **if there are failed patches, you may try to patch them manually by yourself.**
-8. Make sure again to have `CONFIG_KSU` and `CONFIG_KSU_SUSFS` enabled before building the kernel, some other SUSFS feature may be disabled by default, you may enable/disable them via `menuconfig`, `kernel defconfig`, or change the `default [y|n]` option under each `config KSU_SUSFS_` option in `$KernelSU_repo/kernel/Kconfig` if you build with a new defconfig every time.
-9. If your kernel already has the **KSU non-kprobe hook patches** applied, then you have to **`DISABLE`** the `CONFIG_KSU_SUSFS_SUS_SU` option.
-10. If your KernelSU repo is a fork by 5ec1cff, then you should enable **`KSU_SUSFS_HAS_MAGIC_MOUNT`** option.
-11. For `gki kernel android14` or above, if you are building from google artifacts, it is necessary to delete the file `$KERNEL_REPO/common/android/abi_gki_protected_exports_aarch64` and `$KERNEL_REPO/common/android/abi_gki_protected_exports_x86_64`, otherwise some modules like WiFi will not work. Or you can just remove those files whenever those files exist in your kernel repo.
-12. For gki kernel, when building from google artifacts, another thing you may need is to fix the `local spl_date` in function `build_gki_boot_images()` in `$KERNEL_REPO/build/kernel/build_utils.sh` to match the current boot security patch level of your phone.
-13. Build and flash the kernel.
-14. For some compilor error, please refer to the section **[Known Compilor Issues]** below.
-15. For other building tips, please refer to the section **[Other Building Tips]** below.
+8. If you want to make your kernel support other KSU manager variant, you can add its own hash size and hash in `ksu_is_manager_apk()` function in `KernelSU/kernel/apk_sign.c`
+9. Make sure again to have `CONFIG_KSU` and `CONFIG_KSU_SUSFS` enabled before building the kernel, some other SUSFS feature may be disabled by default, you may enable/disable them via `menuconfig`, `kernel defconfig`, or change the `default [y|n]` option under each `config KSU_SUSFS_` option in `$KernelSU_repo/kernel/Kconfig` if you build with a new defconfig every time.
+10. If your kernel already has the **KSU non-kprobe hook patches** applied, then you have to **`DISABLE`** the `CONFIG_KSU_SUSFS_SUS_SU` option.
+11. If your KernelSU repo is a fork by 5ec1cff, then you should enable **`KSU_SUSFS_HAS_MAGIC_MOUNT`** option.
+12. For `gki kernel android14` or above, if you are building from google artifacts, it is necessary to delete the file `$KERNEL_REPO/common/android/abi_gki_protected_exports_aarch64` and `$KERNEL_REPO/common/android/abi_gki_protected_exports_x86_64`, otherwise some modules like WiFi will not work. Or you can just remove those files whenever those files exist in your kernel repo.
+13. For gki kernel, when building from google artifacts, another thing you may need is to fix the `local spl_date` in function `build_gki_boot_images()` in `$KERNEL_REPO/build/kernel/build_utils.sh` to match the current boot security patch level of your phone.
+14. Build and flash the kernel.
+15. For some compilor error, please refer to the section **[Known Compilor Issues]** below.
+16. For other building tips, please refer to the section **[Other Building Tips]** below.
 
 ## Build ksu_susfs userspace tool ##
 1. Run `./build_ksu_susfs_tool.sh` to build the userspace tool `ksu_susfs`, and the arm64 and arm binary will be copied to `ksu_module_susfs/tools/` as well.
