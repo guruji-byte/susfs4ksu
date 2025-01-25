@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..049418ba 100644
+index 67f177f4..5b4100b7 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,136 @@ config KSU_DEBUG
@@ -29,7 +29,7 @@ index 67f177f4..049418ba 100644
 +    help
 +      - Allow hiding the user-defined path and all its sub-paths from various system calls.
 +      - tmpfs filesystem is not allowed to be added. 
-+      - Effective on process with uid > 2000 only.
++      - Effective only on zygote spawned user app process.
 +      - Use with cautious as it may cause performance loss and will be vulnerable to side channel attacks,
 +        just disable this feature if it doesn't work for you or you don't need it at all.
 +
@@ -67,7 +67,7 @@ index 67f177f4..049418ba 100644
 +    default y
 +    help
 +      - Allow spoofing the kstat of user-defined file/directory.
-+      - Effective on all processes.
++      - Effective only on zygote spawned user app process.
 +
 +config KSU_SUSFS_SUS_OVERLAYFS
 +    bool "Enable to automatically spoof kstat and kstatfs for overlayed files/directories"
