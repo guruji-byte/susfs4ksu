@@ -329,7 +329,7 @@ index d7f4c149bd98..79b8c477d94f 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 0e25713d09fa..b477f74f0d88 100644
+index 0e25713d09fa..151e574ed026 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -27,10 +27,37 @@
@@ -673,7 +673,7 @@ index 0e25713d09fa..b477f74f0d88 100644
 +	if (is_zygote_pid) {
 +		last_entry_mnt_id = list_first_entry(&new_ns->list, struct mount, mnt_list)->mnt_id;
 +		list_for_each_entry(q, &new_ns->list, mnt_list) {
-+			if (unlikely(q->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT)) {
++			if (unlikely(q->mnt_id >= DEFAULT_SUS_MNT_ID)) {
 +				continue;
 +			}
 +			q->mnt.susfs_mnt_id_backup = q->mnt_id;
@@ -705,7 +705,7 @@ index 0e25713d09fa..b477f74f0d88 100644
 +	namespace_lock();
 +	list_for_each_entry(mnt, &mnt_ns->list, mnt_list) {
 +		// Change the sus mount to be private
-+		if (mnt->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) {
++		if (mnt->mnt_id >= DEFAULT_SUS_MNT_ID) {
 +			change_mnt_propagation(mnt, MS_PRIVATE);
 +		}
 +	}
@@ -727,7 +727,6 @@ index 0e25713d09fa..b477f74f0d88 100644
 +	return false;
 +}
 +#endif
-\ No newline at end of file
 diff --git a/fs/notify/fdinfo.c b/fs/notify/fdinfo.c
 index 74aeabbf0ea4..d6a1eab90e37 100644
 --- a/fs/notify/fdinfo.c
@@ -998,7 +997,7 @@ index b15a4719a8c8..fb46ebd7e767 100644
  	}
  
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index bd07f0f4f06b..d11834d0a1a3 100644
+index bd07f0f4f06b..3dfa54a6dcb9 100644
 --- a/fs/proc_namespace.c
 +++ b/fs/proc_namespace.c
 @@ -12,12 +12,19 @@
@@ -1026,7 +1025,7 @@ index bd07f0f4f06b..d11834d0a1a3 100644
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt_id >= DEFAULT_SUS_MNT_ID) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
 +
@@ -1038,7 +1037,7 @@ index bd07f0f4f06b..d11834d0a1a3 100644
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt_id >= DEFAULT_SUS_MNT_ID) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
 +
@@ -1050,7 +1049,7 @@ index bd07f0f4f06b..d11834d0a1a3 100644
  	int err;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+	if (unlikely((r->mnt.mnt_root->d_inode->i_state & INODE_STATE_SUS_MOUNT) && !susfs_is_current_ksu_domain()))
++	if (unlikely((r->mnt_id >= DEFAULT_SUS_MNT_ID) && !susfs_is_current_ksu_domain()))
 +		return 0;
 +#endif
 +
