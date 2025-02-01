@@ -106,7 +106,7 @@ index 4fd9cefb56b5..95b89337e562 100644
  }
  
 diff --git a/fs/namei.c b/fs/namei.c
-index 48c57bf25591..ec146360aa1a 100644
+index 48c57bf25591..c36f402a1817 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,10 @@
@@ -159,29 +159,12 @@ index 48c57bf25591..ec146360aa1a 100644
  	if ((!sysctl_protected_fifos && S_ISFIFO(inode->i_mode)) ||
  	    (!sysctl_protected_regular && S_ISREG(inode->i_mode)) ||
  	    likely(!(dir_mode & S_ISVTX)) ||
-@@ -1608,6 +1630,9 @@ static struct dentry *__lookup_hash(const struct qstr *name,
- 	struct dentry *dentry = lookup_dcache(name, base, flags);
- 	struct dentry *old;
- 	struct inode *dir = base->d_inode;
-+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+	int error;
-+#endif
- 
- 	if (dentry)
- 		return dentry;
-@@ -1625,6 +1650,19 @@ static struct dentry *__lookup_hash(const struct qstr *name,
+@@ -1625,6 +1647,12 @@ static struct dentry *__lookup_hash(const struct qstr *name,
  		dput(dentry);
  		dentry = old;
  	}
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
-+		if ((flags & (LOOKUP_CREATE | LOOKUP_EXCL))) {
-+			error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
-+			if (error) {
-+				dput(dentry);
-+				return ERR_PTR(error);
-+			}
-+		}
 +		dput(dentry);
 +		return ERR_PTR(-ENOENT);
 +	}
@@ -189,7 +172,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	return dentry;
  }
  
-@@ -1752,6 +1790,12 @@ static struct dentry *__lookup_slow(const struct qstr *name,
+@@ -1752,6 +1780,12 @@ static struct dentry *__lookup_slow(const struct qstr *name,
  			dentry = old;
  		}
  	}
@@ -202,7 +185,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	return dentry;
  }
  
-@@ -2240,6 +2284,12 @@ static int link_path_walk(const char *name, struct nameidata *nd)
+@@ -2240,6 +2274,12 @@ static int link_path_walk(const char *name, struct nameidata *nd)
  			}
  			return -ENOTDIR;
  		}
@@ -215,7 +198,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	}
  }
  
-@@ -2429,6 +2479,12 @@ int filename_lookup(int dfd, struct filename *name, unsigned flags,
+@@ -2429,6 +2469,12 @@ int filename_lookup(int dfd, struct filename *name, unsigned flags,
  	if (likely(!retval))
  		audit_inode(name, path->dentry, 0);
  	restore_nameidata();
@@ -228,7 +211,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	putname(name);
  	return retval;
  }
-@@ -2905,6 +2961,12 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
+@@ -2905,6 +2951,12 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
  	if (IS_APPEND(dir))
  		return -EPERM;
  
@@ -241,7 +224,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	if (check_sticky(dir, inode) || IS_APPEND(inode) ||
  	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode) || HAS_UNMAPPED_ID(inode))
  		return -EPERM;
-@@ -2933,8 +2995,20 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
+@@ -2933,8 +2985,20 @@ static int may_delete(struct inode *dir, struct dentry *victim, bool isdir)
   */
  static inline int may_create(struct inode *dir, struct dentry *child)
  {
@@ -262,7 +245,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	if (child->d_inode)
  		return -EEXIST;
  	if (IS_DEADDIR(dir))
-@@ -3098,6 +3172,12 @@ static int may_open(const struct path *path, int acc_mode, int flag)
+@@ -3098,6 +3162,12 @@ static int may_open(const struct path *path, int acc_mode, int flag)
  	if (!inode)
  		return -ENOENT;
  
@@ -275,7 +258,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	switch (inode->i_mode & S_IFMT) {
  	case S_IFLNK:
  		return -ELOOP;
-@@ -3169,7 +3249,20 @@ static inline int open_to_namei_flags(int flag)
+@@ -3169,7 +3239,20 @@ static inline int open_to_namei_flags(int flag)
  static int may_o_create(const struct path *dir, struct dentry *dentry, umode_t mode)
  {
  	struct user_namespace *s_user_ns;
@@ -296,7 +279,7 @@ index 48c57bf25591..ec146360aa1a 100644
  	if (error)
  		return error;
  
-@@ -3308,6 +3401,12 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3308,6 +3391,12 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	}
  	if (dentry->d_inode) {
  		/* Cached positive dentry: will open in f_op->open */
@@ -309,7 +292,7 @@ index 48c57bf25591..ec146360aa1a 100644
  		goto out_no_open;
  	}
  
-@@ -3350,6 +3449,16 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3350,6 +3439,16 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  				    mode);
  		if (unlikely(error == -ENOENT) && create_error)
  			error = create_error;
@@ -326,7 +309,7 @@ index 48c57bf25591..ec146360aa1a 100644
  		return error;
  	}
  
-@@ -3365,6 +3474,12 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3365,6 +3464,12 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  			}
  			dput(dentry);
  			dentry = res;
@@ -339,7 +322,7 @@ index 48c57bf25591..ec146360aa1a 100644
  		}
  	}
  
-@@ -3702,12 +3817,19 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3702,12 +3807,19 @@ static struct file *path_openat(struct nameidata *nd,
  	return ERR_PTR(error);
  }
  
@@ -359,7 +342,7 @@ index 48c57bf25591..ec146360aa1a 100644
  
  	set_nameidata(&nd, dfd, pathname);
  	filp = path_openat(&nd, op, flags | LOOKUP_RCU);
-@@ -3715,6 +3837,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
+@@ -3715,6 +3827,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
  		filp = path_openat(&nd, op, flags);
  	if (unlikely(filp == ERR_PTR(-ESTALE)))
  		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
@@ -1184,7 +1167,7 @@ index 273ee82d8aa9..a3eafb78b8f6 100644
  	if (sb->s_op->show_devname) {
  		seq_puts(m, "device ");
 diff --git a/fs/readdir.c b/fs/readdir.c
-index 07a3b5baa404..1b8e16814cfb 100644
+index 07a3b5baa404..29b8e886819c 100644
 --- a/fs/readdir.c
 +++ b/fs/readdir.c
 @@ -21,6 +21,9 @@
@@ -1231,6 +1214,30 @@ index 07a3b5baa404..1b8e16814cfb 100644
  	buf->error = verify_dirent_name(name, namlen);
  	if (unlikely(buf->error))
  		return buf->error;
+@@ -420,6 +436,11 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
+ 
+ 	if (buf->result)
+ 		return -EINVAL;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
++		return 0;
++	}
++#endif
+ 	buf->result = verify_dirent_name(name, namlen);
+ 	if (buf->result < 0)
+ 		return buf->result;
+@@ -495,6 +516,11 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
+ 	buf->error = -EINVAL;	/* only used if we fail.. */
+ 	if (reclen > buf->count)
+ 		return -EINVAL;
++#ifdef CONFIG_KSU_SUSFS_SUS_PATH
++	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
++		return 0;
++	}
++#endif
+ 	d_ino = ino;
+ 	if (sizeof(d_ino) < sizeof(ino) && d_ino != ino) {
+ 		buf->error = -EOVERFLOW;
 diff --git a/fs/stat.c b/fs/stat.c
 index 268c9eb89656..a60f22deae15 100644
 --- a/fs/stat.c
