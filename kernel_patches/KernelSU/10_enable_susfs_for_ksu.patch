@@ -320,7 +320,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index bdf6d97e..1ea1dcb8 100644
+index bdf6d97e..e7faf8c5 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -334,7 +334,7 @@ index bdf6d97e..1ea1dcb8 100644
  #include "allowlist.h"
  #include "arch.h"
  #include "core_hook.h"
-@@ -45,13 +49,79 @@
+@@ -45,13 +49,80 @@
  #include "throne_tracker.h"
  #include "kernel_compat.h"
  
@@ -350,6 +350,7 @@ index bdf6d97e..1ea1dcb8 100644
 +
 +extern u32 susfs_zygote_sid;
 +extern bool susfs_is_mnt_devname_ksu(struct path *path);
++extern bool susfs_is_log_enabled __read_mostly;
 +
 +#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 +extern void susfs_run_try_umount_for_current_mnt_ns(void);
@@ -416,7 +417,7 @@ index bdf6d97e..1ea1dcb8 100644
  		// we are manager, allow!
  		return true;
  	}
-@@ -124,7 +194,7 @@ static void disable_seccomp()
+@@ -124,7 +195,7 @@ static void disable_seccomp()
  #endif
  }
  
@@ -425,7 +426,7 @@ index bdf6d97e..1ea1dcb8 100644
  {
  	struct cred *cred;
  
-@@ -181,7 +251,7 @@ void escape_to_root(void)
+@@ -181,7 +252,7 @@ void escape_to_root(void)
  	disable_seccomp();
  	spin_unlock_irq(&current->sighand->siglock);
  
@@ -434,7 +435,7 @@ index bdf6d97e..1ea1dcb8 100644
  }
  
  int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
-@@ -218,7 +288,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+@@ -218,7 +289,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
  	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
  		new_dentry->d_iname, buf);
  
@@ -443,7 +444,7 @@ index bdf6d97e..1ea1dcb8 100644
  
  	return 0;
  }
-@@ -243,7 +313,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -243,7 +314,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	}
  
  	bool from_root = 0 == current_uid().val;
@@ -452,7 +453,7 @@ index bdf6d97e..1ea1dcb8 100644
  
  	if (!from_root && !from_manager) {
  		// only root or manager can access this interface
-@@ -267,7 +337,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -267,7 +338,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	if (arg2 == CMD_GRANT_ROOT) {
  		if (is_allow_su()) {
  			pr_info("allow root for: %d\n", current_uid().val);
@@ -461,7 +462,7 @@ index bdf6d97e..1ea1dcb8 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("grant_root: prctl reply error\n");
  			}
-@@ -299,10 +369,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -299,10 +370,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		switch (arg3) {
  		case EVENT_POST_FS_DATA: {
  			static bool post_fs_data_lock = false;
@@ -476,7 +477,7 @@ index bdf6d97e..1ea1dcb8 100644
  			}
  			break;
  		}
-@@ -329,7 +402,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -329,7 +403,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		if (!from_root) {
  			return 0;
  		}
@@ -485,7 +486,7 @@ index bdf6d97e..1ea1dcb8 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("sepolicy: prctl reply error\n");
  			}
-@@ -390,6 +463,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -390,6 +464,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -824,7 +825,7 @@ index bdf6d97e..1ea1dcb8 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -457,11 +862,15 @@ static bool should_umount(struct path *path)
+@@ -457,11 +863,15 @@ static bool should_umount(struct path *path)
  		return false;
  	}
  
@@ -840,16 +841,29 @@ index bdf6d97e..1ea1dcb8 100644
  }
  
  static void ksu_umount_mnt(struct path *path, int flags)
-@@ -472,7 +881,7 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -472,7 +882,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
 -static void try_umount(const char *mnt, bool check_mnt, int flags)
-+void ksu_try_umount(const char *mnt, bool check_mnt, int flags)
++#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
++void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid)
++#else
++static void ksu_try_umount(const char *mnt, bool check_mnt, int flags)
++#endif
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -493,6 +902,23 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -490,9 +904,32 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+ 		return;
+ 	}
+ 
++#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
++	if (susfs_is_log_enabled) {
++		pr_info("susfs: umounting '%s' for uid: %d\n", mnt, uid);
++	}
++#endif
++
  	ksu_umount_mnt(&path, flags);
  }
  
@@ -857,23 +871,23 @@ index bdf6d97e..1ea1dcb8 100644
 +void susfs_try_umount_all(uid_t uid) {
 +	susfs_try_umount(uid);
 +	/* For Legacy KSU only */
-+	ksu_try_umount("/system", true, 0);
-+	ksu_try_umount("/system_ext", true, 0);
-+	ksu_try_umount("/vendor", true, 0);
-+	ksu_try_umount("/product", true, 0);
-+	ksu_try_umount("/odm", true, 0);
++	ksu_try_umount("/system", true, 0, uid);
++	ksu_try_umount("/system_ext", true, 0, uid);
++	ksu_try_umount("/vendor", true, 0, uid);
++	ksu_try_umount("/product", true, 0, uid);
++	ksu_try_umount("/odm", true, 0, uid);
 +	// - For '/data/adb/modules' we pass 'false' here because it is a loop device that we can't determine whether 
 +	//   its dev_name is KSU or not, and it is safe to just umount it if it is really a mountpoint
-+	ksu_try_umount("/data/adb/modules", false, MNT_DETACH);
++	ksu_try_umount("/data/adb/modules", false, MNT_DETACH, uid);
 +	/* For both Legacy KSU and Magic Mount KSU */
-+	ksu_try_umount("/debug_ramdisk", true, MNT_DETACH);
++	ksu_try_umount("/debug_ramdisk", true, MNT_DETACH, uid);
 +}
 +#endif
 +
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -512,6 +938,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,6 +949,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -894,7 +908,7 @@ index bdf6d97e..1ea1dcb8 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -521,7 +961,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -521,7 +972,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -912,7 +926,7 @@ index bdf6d97e..1ea1dcb8 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -530,31 +980,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -530,31 +991,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
