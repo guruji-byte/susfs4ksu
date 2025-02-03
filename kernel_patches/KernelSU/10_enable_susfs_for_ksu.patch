@@ -152,13 +152,14 @@ index 67f177f4..4306b898 100644
 +
  endmenu
 diff --git a/kernel/Makefile b/kernel/Makefile
-index 9fec3ef3..c876c329 100644
+index 9fec3ef3..10cd0f99 100644
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
-@@ -51,4 +51,66 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
+@@ -51,4 +51,81 @@ ccflags-y += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
  ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
  ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
  
+-# Keep a new line here!! Because someone may append config
 +## For non-gki compatiblity ##
 +ifeq ($(shell grep -q " current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 +ccflags-y += -DKSU_COMPAT_HAS_CURRENT_SID
@@ -169,6 +170,21 @@ index 9fec3ef3..c876c329 100644
 +endif
 +
 +ccflags-y += -DKSU_UMOUNT
++ifneq ($(shell grep -Eq "get_cred_rcu" $(srctree)/include/linux/cred.h; echo $$?),0)
++$(info -- KSU_SUSFS: adding function 'static inline const struct cred *get_cred_rcu();' to $(srctree)/include/linux/cred.h)
++GET_CRED_RCU = static inline const struct cred *get_cred_rcu(const struct cred *cred)\n\
++{\n\t\
++	struct cred *nonconst_cred = (struct cred *) cred;\n\t\
++	if (!cred)\n\t\t\
++		return NULL;\n\t\
++	if (!atomic_inc_not_zero(&nonconst_cred->usage))\n\t\t\
++		return NULL;\n\t\
++	validate_creds(cred);\n\t\
++	return cred;\n\
++}\n
++$(shell sed -i '/^static inline void put_cred/i $(GET_CRED_RCU)' $(srctree)/include/linux/cred.h;)
++endif
++
 +ifneq ($(shell grep -Eq "^static int can_umount" $(srctree)/fs/namespace.c; echo $$?),0)
 +$(info -- KSU_SUSFS: adding function 'static int can_umount(const struct path *path, int flags);' to $(srctree)/fs/namespace.c)
 +CAN_UMOUNT = static int can_umount(const struct path *path, int flags)\n\
@@ -221,7 +237,8 @@ index 9fec3ef3..c876c329 100644
 +$(info -- You have not integrate susfs in your kernel.)
 +$(info -- Read: https://gitlab.com/simonpunk/susfs4ksu)
 +endif
- # Keep a new line here!! Because someone may append config
++# Keep a new line here!! Because someone may append config
+\ No newline at end of file
 diff --git a/kernel/allowlist.c b/kernel/allowlist.c
 index 9daceef2..54ced73d 100644
 --- a/kernel/allowlist.c
@@ -303,7 +320,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 913867a5..0a068f0f 100644
+index bdf6d97e..1ea1dcb8 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -399,8 +416,8 @@ index 913867a5..0a068f0f 100644
  		// we are manager, allow!
  		return true;
  	}
-@@ -106,7 +176,7 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
- 	set_groups(cred, group_info);
+@@ -124,7 +194,7 @@ static void disable_seccomp()
+ #endif
  }
  
 -void escape_to_root(void)
@@ -408,16 +425,16 @@ index 913867a5..0a068f0f 100644
  {
  	struct cred *cred;
  
-@@ -163,7 +233,7 @@ void escape_to_root(void)
- 
- 	setup_groups(profile, cred);
+@@ -181,7 +251,7 @@ void escape_to_root(void)
+ 	disable_seccomp();
+ 	spin_unlock_irq(&current->sighand->siglock);
  
 -	setup_selinux(profile->selinux_domain);
 +	ksu_setup_selinux(profile->selinux_domain);
  }
  
  int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
-@@ -200,7 +270,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+@@ -218,7 +288,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
  	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
  		new_dentry->d_iname, buf);
  
@@ -426,7 +443,7 @@ index 913867a5..0a068f0f 100644
  
  	return 0;
  }
-@@ -225,7 +295,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -243,7 +313,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	}
  
  	bool from_root = 0 == current_uid().val;
@@ -435,7 +452,7 @@ index 913867a5..0a068f0f 100644
  
  	if (!from_root && !from_manager) {
  		// only root or manager can access this interface
-@@ -249,7 +319,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -267,7 +337,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	if (arg2 == CMD_GRANT_ROOT) {
  		if (is_allow_su()) {
  			pr_info("allow root for: %d\n", current_uid().val);
@@ -444,7 +461,7 @@ index 913867a5..0a068f0f 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("grant_root: prctl reply error\n");
  			}
-@@ -281,10 +351,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -299,10 +369,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		switch (arg3) {
  		case EVENT_POST_FS_DATA: {
  			static bool post_fs_data_lock = false;
@@ -459,7 +476,7 @@ index 913867a5..0a068f0f 100644
  			}
  			break;
  		}
-@@ -311,7 +384,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -329,7 +402,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		if (!from_root) {
  			return 0;
  		}
@@ -468,7 +485,7 @@ index 913867a5..0a068f0f 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("sepolicy: prctl reply error\n");
  			}
-@@ -372,6 +445,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -390,6 +463,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -807,7 +824,7 @@ index 913867a5..0a068f0f 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -439,11 +844,15 @@ static bool should_umount(struct path *path)
+@@ -457,11 +862,15 @@ static bool should_umount(struct path *path)
  		return false;
  	}
  
@@ -823,7 +840,7 @@ index 913867a5..0a068f0f 100644
  }
  
  static void ksu_umount_mnt(struct path *path, int flags)
-@@ -454,7 +863,7 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -472,7 +881,7 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -832,7 +849,7 @@ index 913867a5..0a068f0f 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -475,6 +884,23 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -493,6 +902,23 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
  	ksu_umount_mnt(&path, flags);
  }
  
@@ -856,7 +873,7 @@ index 913867a5..0a068f0f 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -494,6 +920,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,6 +938,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -877,7 +894,7 @@ index 913867a5..0a068f0f 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -503,7 +943,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -521,7 +961,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -895,7 +912,7 @@ index 913867a5..0a068f0f 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -512,31 +962,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -530,31 +980,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
