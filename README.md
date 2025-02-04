@@ -11,7 +11,7 @@
 
 ## Patch Instruction (For GKI Kernel only and building from official google artifacts) ##
 **- Prerequisite -**
-1. All susfs patches are based on the original official KernelSU (the one from weishu), so you should clone his repo for a better patching result.
+1. All susfs patches are based on the **original official KernelSU (the one from weishu)** with **latest release tag**, so you should clone his repo with **latest release tag** for a better patching result.
 2. SUSFS now supports AUTO_ADD_ features for Magick Mount KernelSU as long as you have `KSU_SUSFS_HAS_MAGIC_MOUNT` feature enabled.
 
 **- Apply SUSFS patches -**
