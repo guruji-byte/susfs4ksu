@@ -303,7 +303,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index bdf6d97e..e7faf8c5 100644
+index bdf6d97e..becffd76 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -317,7 +317,7 @@ index bdf6d97e..e7faf8c5 100644
  #include "allowlist.h"
  #include "arch.h"
  #include "core_hook.h"
-@@ -45,13 +49,80 @@
+@@ -45,13 +49,81 @@
  #include "throne_tracker.h"
  #include "kernel_compat.h"
  
@@ -333,8 +333,9 @@ index bdf6d97e..e7faf8c5 100644
 +
 +extern u32 susfs_zygote_sid;
 +extern bool susfs_is_mnt_devname_ksu(struct path *path);
++#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +extern bool susfs_is_log_enabled __read_mostly;
-+
++#endif
 +#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 +extern void susfs_run_try_umount_for_current_mnt_ns(void);
 +#endif // #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
@@ -400,7 +401,7 @@ index bdf6d97e..e7faf8c5 100644
  		// we are manager, allow!
  		return true;
  	}
-@@ -124,7 +195,7 @@ static void disable_seccomp()
+@@ -124,7 +196,7 @@ static void disable_seccomp()
  #endif
  }
  
@@ -409,7 +410,7 @@ index bdf6d97e..e7faf8c5 100644
  {
  	struct cred *cred;
  
-@@ -181,7 +252,7 @@ void escape_to_root(void)
+@@ -181,7 +253,7 @@ void escape_to_root(void)
  	disable_seccomp();
  	spin_unlock_irq(&current->sighand->siglock);
  
@@ -418,7 +419,7 @@ index bdf6d97e..e7faf8c5 100644
  }
  
  int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
-@@ -218,7 +289,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+@@ -218,7 +290,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
  	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
  		new_dentry->d_iname, buf);
  
@@ -427,7 +428,7 @@ index bdf6d97e..e7faf8c5 100644
  
  	return 0;
  }
-@@ -243,7 +314,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -243,7 +315,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	}
  
  	bool from_root = 0 == current_uid().val;
@@ -436,7 +437,7 @@ index bdf6d97e..e7faf8c5 100644
  
  	if (!from_root && !from_manager) {
  		// only root or manager can access this interface
-@@ -267,7 +338,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -267,7 +339,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  	if (arg2 == CMD_GRANT_ROOT) {
  		if (is_allow_su()) {
  			pr_info("allow root for: %d\n", current_uid().val);
@@ -445,7 +446,7 @@ index bdf6d97e..e7faf8c5 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("grant_root: prctl reply error\n");
  			}
-@@ -299,10 +370,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -299,10 +371,13 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		switch (arg3) {
  		case EVENT_POST_FS_DATA: {
  			static bool post_fs_data_lock = false;
@@ -460,7 +461,7 @@ index bdf6d97e..e7faf8c5 100644
  			}
  			break;
  		}
-@@ -329,7 +403,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -329,7 +404,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		if (!from_root) {
  			return 0;
  		}
@@ -469,7 +470,7 @@ index bdf6d97e..e7faf8c5 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("sepolicy: prctl reply error\n");
  			}
-@@ -390,6 +464,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -390,6 +465,338 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -808,7 +809,7 @@ index bdf6d97e..e7faf8c5 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -457,11 +863,15 @@ static bool should_umount(struct path *path)
+@@ -457,11 +864,15 @@ static bool should_umount(struct path *path)
  		return false;
  	}
  
@@ -824,7 +825,7 @@ index bdf6d97e..e7faf8c5 100644
  }
  
  static void ksu_umount_mnt(struct path *path, int flags)
-@@ -472,7 +882,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -472,7 +883,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -837,11 +838,11 @@ index bdf6d97e..e7faf8c5 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -490,9 +904,32 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -490,9 +905,32 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
  		return;
  	}
  
-+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
++#if defined(CONFIG_KSU_SUSFS_TRY_UMOUNT) && defined(CONFIG_KSU_SUSFS_ENABLE_LOG)
 +	if (susfs_is_log_enabled) {
 +		pr_info("susfs: umounting '%s' for uid: %d\n", mnt, uid);
 +	}
@@ -870,7 +871,7 @@ index bdf6d97e..e7faf8c5 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -512,6 +949,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -512,6 +950,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -891,7 +892,7 @@ index bdf6d97e..e7faf8c5 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -521,7 +972,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -521,7 +973,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -909,7 +910,7 @@ index bdf6d97e..e7faf8c5 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -530,31 +991,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -530,31 +992,39 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
