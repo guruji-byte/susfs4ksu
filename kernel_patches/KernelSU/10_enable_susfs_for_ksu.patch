@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..4306b898 100644
+index 67f177f4..8fba990e 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,148 @@ config KSU_DEBUG
@@ -15,7 +15,7 @@ index 67f177f4..4306b898 100644
 +      Patch and Enable SUSFS to kernel with KernelSU.
 +
 +config KSU_SUSFS_HAS_MAGIC_MOUNT
-+    bool "Say yes if the current KernelSU repo has magic mount implemented (default n)"
++    bool "Say yes if the current KernelSU repo has magic mount implemented (default y)"
 +    depends on KSU
 +    default y
 +    help
@@ -318,7 +318,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 76282a94..f392d18a 100644
+index 56ccea07..9ba62419 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -1021,7 +1021,7 @@ index 4bcfbf38..5d5fcf35 100644
  					 umode_t mode);
  extern ssize_t ksu_kernel_read_compat(struct file *p, void *buf, size_t count,
 diff --git a/kernel/ksu.c b/kernel/ksu.c
-index c76ece70..e3d36c6c 100644
+index d517c3b5..f3e13004 100644
 --- a/kernel/ksu.c
 +++ b/kernel/ksu.c
 @@ -11,6 +11,10 @@
@@ -1055,7 +1055,7 @@ index c76ece70..e3d36c6c 100644
  	ksu_core_init();
  
  	ksu_workqueue = alloc_ordered_workqueue("kernelsu_work_queue", 0);
-@@ -68,7 +76,7 @@ int __init kernelsu_init(void)
+@@ -72,7 +80,7 @@ int __init kernelsu_init(void)
  	return 0;
  }
  
@@ -1064,7 +1064,7 @@ index c76ece70..e3d36c6c 100644
  {
  	ksu_allowlist_exit();
  
-@@ -82,8 +90,8 @@ void kernelsu_exit(void)
+@@ -88,8 +96,8 @@ void kernelsu_exit(void)
  	ksu_core_exit();
  }
  
@@ -1076,12 +1076,12 @@ index c76ece70..e3d36c6c 100644
  MODULE_LICENSE("GPL");
  MODULE_AUTHOR("weishu");
 diff --git a/kernel/ksud.c b/kernel/ksud.c
-index d2ae017a..89ac724c 100644
+index 98fee107..78955d85 100644
 --- a/kernel/ksud.c
 +++ b/kernel/ksud.c
-@@ -51,17 +51,21 @@ static struct work_struct stop_vfs_read_work;
- static struct work_struct stop_execve_hook_work;
- static struct work_struct stop_input_hook_work;
+@@ -57,17 +57,21 @@ bool ksu_execveat_hook __read_mostly = true;
+ bool ksu_input_hook __read_mostly = true;
+ #endif
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +bool susfs_is_sus_su_ready = false;
@@ -1104,7 +1104,7 @@ index d2ae017a..89ac724c 100644
  	ksu_load_allow_list();
  	// sanity check, this may influence the performance
  	stop_input_hook();
-@@ -179,7 +183,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -190,7 +194,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  					first_arg);
  				if (!strcmp(first_arg, "second_stage")) {
  					pr_info("/system/bin/init second_stage executed\n");
@@ -1113,7 +1113,7 @@ index d2ae017a..89ac724c 100644
  					init_second_stage_executed = true;
  					ksu_android_ns_fs_check();
  				}
-@@ -203,7 +207,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -214,7 +218,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  				pr_info("/init first arg: %s\n", first_arg);
  				if (!strcmp(first_arg, "--second-stage")) {
  					pr_info("/init second_stage executed\n");
@@ -1122,7 +1122,7 @@ index d2ae017a..89ac724c 100644
  					init_second_stage_executed = true;
  					ksu_android_ns_fs_check();
  				}
-@@ -240,7 +244,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -251,7 +255,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  					    (!strcmp(env_value, "1") ||
  					     !strcmp(env_value, "true"))) {
  						pr_info("/init second_stage executed\n");
@@ -1131,7 +1131,7 @@ index d2ae017a..89ac724c 100644
  						init_second_stage_executed =
  							true;
  						ksu_android_ns_fs_check();
-@@ -255,7 +259,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+@@ -266,7 +270,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
  		first_app_process = false;
  		pr_info("exec app_process, /data prepared, second_stage: %d\n",
  			init_second_stage_executed);
@@ -1140,10 +1140,10 @@ index d2ae017a..89ac724c 100644
  		stop_execve_hook();
  	}
  
-@@ -522,6 +526,10 @@ static void stop_execve_hook()
- {
- 	bool ret = schedule_work(&stop_execve_hook_work);
- 	pr_info("unregister execve kprobe: %d!\n", ret);
+@@ -557,6 +561,10 @@ static void stop_execve_hook()
+ 	ksu_execveat_hook = false;
+ 	pr_info("stop execve_hook\n");
+ #endif
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +	susfs_is_sus_su_ready = true;
 +	pr_info("susfs: sus_su is ready\n");
@@ -1412,7 +1412,7 @@ index 88f1e7d3..36edcc7f 100644
  u32 ksu_get_devpts_sid();
  
 diff --git a/kernel/sucompat.c b/kernel/sucompat.c
-index 90adfa4f..31b3e8a1 100644
+index fdfc0d59..03f2276d 100644
 --- a/kernel/sucompat.c
 +++ b/kernel/sucompat.c
 @@ -9,6 +9,9 @@
@@ -1484,9 +1484,9 @@ index 90adfa4f..31b3e8a1 100644
  
  	return 0;
  }
-@@ -277,3 +305,41 @@ void ksu_sucompat_exit()
- 		destroy_kprobe(&su_kps[i]);
+@@ -284,3 +312,41 @@ void ksu_sucompat_exit()
  	}
+ #endif
  }
 +
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
@@ -1527,10 +1527,10 @@ index 90adfa4f..31b3e8a1 100644
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +
 diff --git a/kernel/throne_tracker.c b/kernel/throne_tracker.c
-index d7c1dae1..b30f3182 100644
+index 351bc377..e4a44a09 100644
 --- a/kernel/throne_tracker.c
 +++ b/kernel/throne_tracker.c
-@@ -178,7 +178,7 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
+@@ -184,7 +184,7 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
  				}
  			}
  
@@ -1539,7 +1539,7 @@ index d7c1dae1..b30f3182 100644
  			pr_info("Found new base.apk at path: %s, is_manager: %d\n",
  				dirpath, is_manager);
  			if (is_manager) {
-@@ -274,7 +274,7 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
+@@ -280,7 +280,7 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
  	return exist;
  }
  
