@@ -373,7 +373,7 @@ index a3922d96fac9..457d661f4c39 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..d963c402d0be 100644
+index 2bef741f2092..6790c1c12fbf 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -32,10 +32,37 @@
@@ -582,7 +582,7 @@ index 2bef741f2092..d963c402d0be 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
  	unlock_mount_hash();
-@@ -1057,8 +1190,50 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1057,8 +1190,47 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct super_block *sb = old->mnt.mnt_sb;
  	struct mount *mnt;
  	int err;
@@ -599,8 +599,10 @@ index 2bef741f2092..d963c402d0be 100644
 +	 * - if caller process is KSU, consider the following situation:
 +	 *     1. it is NOT doing unshare => call alloc_vfsmnt() to assign a new sus mnt_id
 +	 *     2. it is doing unshare => spoof the new mnt_id with the old mnt_id
-+	 * - If caller process is zygote and old mnt_id is sus => call alloc_vfsmnt() to assign a new sus mnt_id
-+	 * - For the rest of caller process that doing unshare => call alloc_vfsmnt() to assign a new sus mnt_id only for old sus mount
++	 * - For the rest of caller process with sus old->mnt_id => call alloc_vfsmnt() to assign a new sus mnt_id
++	 * - Important notes: Here we can't determine whether the unshare is called by zygisk or not,
++	 *   so we can only patch out the unshare code in zygisk source code for now,
++	 *   but at least we can deal with old sus mounts using alloc_vfsmnt()
 +	 */
 +	// Firstly, check if it is KSU process
 +	if (unlikely(is_current_ksu_domain)) {
@@ -618,11 +620,6 @@ index 2bef741f2092..d963c402d0be 100644
 +	}
 +	// Lastly, just check if old->mnt_id is sus
 +	if (old->mnt_id >= DEFAULT_SUS_MNT_ID) {
-+		/* Important Note: 
-+		 *  - Here we can't determine whether the unshare is called by zygisk or not,
-+		 *    so we can only patch out the unshare code in zygisk source code for now,
-+		 *    but at least we can deal with old sus mounts using alloc_vfsmnt()
-+		 */
 +		mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
 +		goto bypass_orig_flow;
 +	}
@@ -634,7 +631,7 @@ index 2bef741f2092..d963c402d0be 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1084,6 +1259,27 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1084,6 +1256,27 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
@@ -662,7 +659,7 @@ index 2bef741f2092..d963c402d0be 100644
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1881,6 +2077,13 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1881,6 +2074,13 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
@@ -676,7 +673,7 @@ index 2bef741f2092..d963c402d0be 100644
  			unlock_mount_hash();
  		}
  	}
-@@ -2411,6 +2614,27 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2411,6 +2611,27 @@ static int do_loopback(struct path *path, const char *old_name,
  		umount_tree(mnt, UMOUNT_SYNC);
  		unlock_mount_hash();
  	}
@@ -704,7 +701,7 @@ index 2bef741f2092..d963c402d0be 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3423,6 +3647,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3423,6 +3644,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -715,7 +712,7 @@ index 2bef741f2092..d963c402d0be 100644
  
  	BUG_ON(!ns);
  
-@@ -3442,6 +3670,15 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3442,6 +3667,15 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -731,7 +728,7 @@ index 2bef741f2092..d963c402d0be 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3483,6 +3720,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3483,6 +3717,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -756,7 +753,7 @@ index 2bef741f2092..d963c402d0be 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3555,6 +3810,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+@@ -3555,6 +3807,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
  
  	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
  
@@ -770,7 +767,7 @@ index 2bef741f2092..d963c402d0be 100644
  	kfree(options);
  out_data:
  	kfree(kernel_dev);
-@@ -3777,6 +4039,13 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3777,6 +4036,13 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -784,7 +781,7 @@ index 2bef741f2092..d963c402d0be 100644
  	return ret;
  }
  
-@@ -4649,3 +4918,37 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4649,3 +4915,37 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
