@@ -373,10 +373,10 @@ index a3922d96fac9..457d661f4c39 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 2bef741f2092..6790c1c12fbf 100644
+index 2bef741f2092..d6fd71b6daf4 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
-@@ -32,10 +32,37 @@
+@@ -32,10 +32,36 @@
  #include <linux/fs_context.h>
  #include <linux/shmem_fs.h>
  #include <linux/mnt_idmapping.h>
@@ -394,7 +394,6 @@ index 2bef741f2092..6790c1c12fbf 100644
 +static DEFINE_IDA(susfs_mnt_id_ida);
 +static DEFINE_IDA(susfs_mnt_group_ida);
 +
-+#define CL_ZYGOTE_COPY_MNT_NS BIT(24) /* used by copy_mnt_ns() */
 +#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
 +#endif
 +
@@ -414,7 +413,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  /* Maximum number of mounts in a mount namespace */
  unsigned int sysctl_mount_max __read_mostly = 100000;
  
-@@ -123,6 +150,18 @@ static inline struct hlist_head *mp_hash(struct dentry *dentry)
+@@ -123,6 +149,18 @@ static inline struct hlist_head *mp_hash(struct dentry *dentry)
  	return &mountpoint_hashtable[tmp & mp_hash_mask];
  }
  
@@ -433,7 +432,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  static int mnt_alloc_id(struct mount *mnt)
  {
  	int res = ida_alloc(&mnt_id_ida, GFP_KERNEL);
-@@ -135,6 +174,26 @@ static int mnt_alloc_id(struct mount *mnt)
+@@ -135,6 +173,26 @@ static int mnt_alloc_id(struct mount *mnt)
  
  static void mnt_free_id(struct mount *mnt)
  {
@@ -460,7 +459,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	ida_free(&mnt_id_ida, mnt->mnt_id);
  }
  
-@@ -143,7 +202,20 @@ static void mnt_free_id(struct mount *mnt)
+@@ -143,7 +201,20 @@ static void mnt_free_id(struct mount *mnt)
   */
  static int mnt_alloc_group_id(struct mount *mnt)
  {
@@ -481,7 +480,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  
  	if (res < 0)
  		return res;
-@@ -156,6 +228,15 @@ static int mnt_alloc_group_id(struct mount *mnt)
+@@ -156,6 +227,15 @@ static int mnt_alloc_group_id(struct mount *mnt)
   */
  void mnt_release_group_id(struct mount *mnt)
  {
@@ -497,7 +496,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	ida_free(&mnt_group_ida, mnt->mnt_group_id);
  	mnt->mnt_group_id = 0;
  }
-@@ -193,13 +274,31 @@ int mnt_get_count(struct mount *mnt)
+@@ -193,13 +273,31 @@ int mnt_get_count(struct mount *mnt)
  #endif
  }
  
@@ -529,7 +528,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  		if (err)
  			goto out_free_cache;
  
-@@ -967,11 +1066,26 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -967,11 +1065,26 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  {
  	struct mount *mnt;
  	struct user_namespace *fs_userns;
@@ -556,7 +555,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -988,6 +1102,25 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
+@@ -988,6 +1101,27 @@ struct vfsmount *vfs_create_mount(struct fs_context *fc)
  	if (!initial_idmapping(fs_userns))
  		mnt->mnt.mnt_userns = get_user_ns(fs_userns);
  
@@ -566,6 +565,7 @@ index 2bef741f2092..6790c1c12fbf 100644
 +	if (susfs_is_current_zygote_domain()) {
 +		mnt_ns = current->nsproxy->mnt_ns;
 +		if (mnt_ns) {
++			get_mnt_ns(mnt_ns);
 +			rcu_read_lock();
 +			mnt_id = list_first_entry(&mnt_ns->list, struct mount, mnt_list)->mnt_id;
 +			list_for_each_entry_rcu(m, &mnt_ns->list, mnt_list) {
@@ -576,13 +576,14 @@ index 2bef741f2092..6790c1c12fbf 100644
 +			WRITE_ONCE(mnt->mnt.susfs_mnt_id_backup, READ_ONCE(mnt->mnt_id));
 +			WRITE_ONCE(mnt->mnt_id, READ_ONCE(mnt_id));
 +			rcu_read_unlock();
++			put_mnt_ns(mnt_ns);
 +		}
 +	}
 +#endif
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
  	unlock_mount_hash();
-@@ -1057,8 +1190,47 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1057,8 +1191,47 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	struct super_block *sb = old->mnt.mnt_sb;
  	struct mount *mnt;
  	int err;
@@ -631,18 +632,20 @@ index 2bef741f2092..6790c1c12fbf 100644
  	if (!mnt)
  		return ERR_PTR(-ENOMEM);
  
-@@ -1084,6 +1256,27 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
+@@ -1084,6 +1257,30 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
  	mnt->mnt.mnt_root = dget(root);
  	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
  	mnt->mnt_parent = mnt;
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// - If caller process is zygote, then it is a normal mount, so we calculate the next available
-+	//   fake mnt_id for this mount, but there is one situation that the previous mount is not
-+	//   attached to the current mnt_ns so that it will fail to calculate the correct fake mnt_id.
++	//   fake mnt_id for this mount, but there is one situation that the previous clone_mnt is not
++	//   yet attached to the current mnt_ns during copy_tree() so that it will fail to calculate
++	//   the correct fake mnt_id.
 +	// - Currently we have a tmep fix for this in copy_tree(), but maybe not reliable for other devices
-+	if (likely(is_current_zygote_domain) && !(flag & CL_ZYGOTE_COPY_MNT_NS)) {
++	if (likely(is_current_zygote_domain) && !(flag & CL_COPY_MNT_NS)) {
 +		mnt_ns = current->nsproxy->mnt_ns;
 +		if (mnt_ns) {
++			get_mnt_ns(mnt_ns);
 +			rcu_read_lock();
 +			mnt_id = list_first_entry(&mnt_ns->list, struct mount, mnt_list)->mnt_id;
 +			list_for_each_entry_rcu(m, &mnt_ns->list, mnt_list) {
@@ -653,27 +656,50 @@ index 2bef741f2092..6790c1c12fbf 100644
 +			WRITE_ONCE(mnt->mnt.susfs_mnt_id_backup, READ_ONCE(mnt->mnt_id));
 +			WRITE_ONCE(mnt->mnt_id, READ_ONCE(mnt_id));
 +			rcu_read_unlock();
++			put_mnt_ns(mnt_ns);
 +		}
 +	}
 +#endif
  	lock_mount_hash();
  	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
  	unlock_mount_hash();
-@@ -1881,6 +2074,13 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+@@ -1833,6 +2030,9 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+ 					int flag)
+ {
+ 	struct mount *res, *p, *q, *r, *parent;
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++	bool is_current_zygote_domain = susfs_is_current_zygote_domain();
++#endif
+ 
+ 	if (!(flag & CL_COPY_UNBINDABLE) && IS_MNT_UNBINDABLE(mnt))
+ 		return ERR_PTR(-EINVAL);
+@@ -1849,6 +2049,9 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+ 	p = mnt;
+ 	list_for_each_entry(r, &mnt->mnt_mounts, mnt_child) {
+ 		struct mount *s;
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++		int attach_mnt_count = 0;
++#endif
+ 		if (!is_subdir(r->mnt_mountpoint, dentry))
+ 			continue;
+ 
+@@ -1878,6 +2081,15 @@ struct mount *copy_tree(struct mount *mnt, struct dentry *dentry,
+ 			q = clone_mnt(p, p->mnt.mnt_root, flag);
+ 			if (IS_ERR(q))
+ 				goto out;
++#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
++			if (is_current_zygote_domain &&
++				!(flag & CL_COPY_MNT_NS) &&
++				q->mnt_id < DEFAULT_SUS_MNT_ID)
++			{
++				attach_mnt_count++;
++				q->mnt_id += attach_mnt_count;
++			}
++#endif
  			lock_mount_hash();
  			list_add_tail(&q->mnt_list, &res->mnt_list);
  			attach_mnt(q, parent, p->mnt_mp);
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+			// This is a temp fix to force re-assign the fake mnt_id for a specific mount during clone_mnt(),
-+			// not sure what will happen on other devices.
-+			if (unlikely(q->mnt_id <= q->mnt_parent->mnt_id)) {
-+				q->mnt_id = q->mnt_parent->mnt_id + 1;
-+			}
-+#endif
- 			unlock_mount_hash();
- 		}
- 	}
-@@ -2411,6 +2611,27 @@ static int do_loopback(struct path *path, const char *old_name,
+@@ -2411,6 +2623,27 @@ static int do_loopback(struct path *path, const char *old_name,
  		umount_tree(mnt, UMOUNT_SYNC);
  		unlock_mount_hash();
  	}
@@ -701,7 +727,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3423,6 +3644,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3423,6 +3656,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -712,7 +738,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  
  	BUG_ON(!ns);
  
-@@ -3442,6 +3667,15 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3442,6 +3679,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -720,15 +746,11 @@ index 2bef741f2092..6790c1c12fbf 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	// Always let clone_mnt() in copy_tree() know it is from copy_mnt_ns()
 +	copy_flags |= CL_COPY_MNT_NS;
-+	if (is_zygote_pid) {
-+		// Let clone_mnt() in copy_tree() know copy_mnt_ns() is run by zygote process
-+		copy_flags |= CL_ZYGOTE_COPY_MNT_NS;
-+	}
 +#endif
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3483,6 +3717,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3483,6 +3725,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -753,7 +775,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3555,6 +3807,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+@@ -3555,6 +3815,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
  
  	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
  
@@ -767,7 +789,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	kfree(options);
  out_data:
  	kfree(kernel_dev);
-@@ -3777,6 +4036,13 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3777,6 +4044,13 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -781,7 +803,7 @@ index 2bef741f2092..6790c1c12fbf 100644
  	return ret;
  }
  
-@@ -4649,3 +4915,37 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4649,3 +4923,37 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
