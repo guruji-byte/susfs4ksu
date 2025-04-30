@@ -29,11 +29,13 @@
 struct st_susfs_sus_path {
 	unsigned long                    target_ino;
 	char                             target_pathname[SUSFS_MAX_LEN_PATHNAME];
+	unsigned int                     i_uid;
 };
 
 struct st_susfs_sus_path_hlist {
 	unsigned long                    target_ino;
 	char                             target_pathname[SUSFS_MAX_LEN_PATHNAME];
+	unsigned int                     i_uid;
 	struct hlist_node                node;
 };
 #endif
@@ -128,7 +130,6 @@ struct st_sus_su {
 /* sus_path */
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info);
-int susfs_sus_ino_for_filldir64(unsigned long ino);
 #endif
 /* sus_mount */
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT

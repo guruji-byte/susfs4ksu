@@ -2,6 +2,8 @@
 #define KSU_SUSFS_DEF_H
 
 #include <linux/bits.h>
+#include <linux/cred.h>
+#include <linux/fs.h>
 
 /********/
 /* ENUM */
@@ -58,5 +60,12 @@
 #define DATA_ADB_NO_AUTO_ADD_SUS_BIND_MOUNT "/data/adb/susfs_no_auto_add_sus_bind_mount"
 #define DATA_ADB_NO_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT "/data/adb/susfs_no_auto_add_sus_ksu_default_mount"
 #define DATA_ADB_NO_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT "/data/adb/susfs_no_auto_add_try_umount_for_bind_mount"
+
+static inline bool susfs_need_to_spoof_sus_path(struct inode *inode, uid_t i_uid)
+{
+    return (unlikely(inode->i_state & INODE_STATE_SUS_PATH) &&
+            (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) &&
+            i_uid != current_uid().val);
+}
 
 #endif // #ifndef KSU_SUSFS_DEF_H

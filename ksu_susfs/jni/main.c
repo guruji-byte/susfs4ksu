@@ -75,6 +75,7 @@
 struct st_susfs_sus_path {
 	unsigned long           target_ino;
 	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
+	unsigned int            i_uid;
 };
 
 struct st_susfs_sus_mount {
@@ -304,6 +305,7 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 		info.target_ino = sb.st_ino;
+		info.i_uid = sb.st_uid;
 		strncpy(info.target_pathname, argv[2], SUSFS_MAX_LEN_PATHNAME-1);
 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_SUS_PATH, &info, NULL, &error);
 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ADD_SUS_PATH);
