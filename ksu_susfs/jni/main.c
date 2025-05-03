@@ -22,6 +22,7 @@
 
 #define CMD_SUSFS_ADD_SUS_PATH 0x55550
 #define CMD_SUSFS_ADD_SUS_MOUNT 0x55560
+#define CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS 0x55561
 #define CMD_SUSFS_ADD_SUS_KSTAT 0x55570
 #define CMD_SUSFS_UPDATE_SUS_KSTAT 0x55571
 #define CMD_SUSFS_ADD_SUS_KSTAT_STATICALLY 0x55572
@@ -216,6 +217,13 @@ static void print_help(void) {
 	log("         |--> Added mounted path will be hidden from /proc/self/[mounts|mountinfo|mountstats]\n");
 	log("         |--> Please be reminded that the target path must be added after the bind mount or overlay operation, otherwise it won't be effective\n");
 	log("\n");
+	log("        hide_sus_mnts_for_all_procs <0|1>\n");
+	log("         |--> 0 -> Do not hide sus mounts for all processes but only non ksu process\n");
+	log("         |--> 1 -> Hide all sus mounts for all processes no matter they are ksu processes or not\n");
+	log("         |--> NOTE:\n");
+	log("              - It is set to 1 in kernel by default\n");
+	log("              - It is recommended to set to 0 after screen is unlocked, or during service.sh or boot-completed.sh stage, as this should fix the issue on some rooted apps that rely on mounts mounted by ksu process\n");
+	log("\n");
 	log("        add_sus_kstat_statically </path/of/file_or_directory> <ino> <dev> <nlink> <size>\\\n");
 	log("                                 <atime> <atime_nsec> <mtime> <mtime_nsec> <ctime> <ctime_nsec>\n");
 	log("                                 <blocks> <blksize>\n");
@@ -323,6 +331,15 @@ int main(int argc, char *argv[]) {
 		info.target_dev = sb.st_dev;
 		prctl(KERNEL_SU_OPTION, CMD_SUSFS_ADD_SUS_MOUNT, &info, NULL, &error);
 		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_ADD_SUS_MOUNT);
+		return error;
+	// hide_sus_mnts_for_all_procs
+	} else if (argc == 3 && !strcmp(argv[1], "hide_sus_mnts_for_all_procs")) {
+		if (strcmp(argv[2], "0") && strcmp(argv[2], "1")) {
+			print_help();
+			return 1;
+		}
+		prctl(KERNEL_SU_OPTION, CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS, atoi(argv[2]), NULL, &error);
+		PRT_MSG_IF_OPERATION_NOT_SUPPORTED(error, CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS);
 		return error;
 	// add_sus_kstat_statically
 	} else if (argc == 15 && !strcmp(argv[1], "add_sus_kstat_statically")) {
