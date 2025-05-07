@@ -98,10 +98,10 @@ index 4f25015aa534..555e4cb31e65 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/exec.c b/fs/exec.c
-index e6644f3b384f..18dbd5ea83ef 100644
+index 0149f828d409..bf8d29a65b88 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
-@@ -1881,6 +1881,12 @@ static int bprm_execve(struct linux_binprm *bprm,
+@@ -1879,6 +1879,12 @@ static int bprm_execve(struct linux_binprm *bprm,
  	return retval;
  }
  
@@ -114,7 +114,7 @@ index e6644f3b384f..18dbd5ea83ef 100644
  static int do_execveat_common(int fd, struct filename *filename,
  			      struct user_arg_ptr argv,
  			      struct user_arg_ptr envp,
-@@ -1892,6 +1898,11 @@ static int do_execveat_common(int fd, struct filename *filename,
+@@ -1890,6 +1896,11 @@ static int do_execveat_common(int fd, struct filename *filename,
  	if (IS_ERR(filename))
  		return PTR_ERR(filename);
  
@@ -127,7 +127,7 @@ index e6644f3b384f..18dbd5ea83ef 100644
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
 diff --git a/fs/namei.c b/fs/namei.c
-index 893b1ec58c02..020cd9938f11 100644
+index a4a660069352..1818591e7712 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -40,6 +40,9 @@
@@ -255,7 +255,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	return retval;
  }
  
-@@ -2968,6 +3030,12 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
+@@ -2966,6 +3028,12 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
  	if (IS_APPEND(dir))
  		return -EPERM;
  
@@ -268,7 +268,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	if (check_sticky(mnt_userns, dir, inode) || IS_APPEND(inode) ||
  	    IS_IMMUTABLE(inode) || IS_SWAPFILE(inode) ||
  	    HAS_UNMAPPED_ID(mnt_userns, inode))
-@@ -2998,7 +3066,23 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
+@@ -2996,7 +3064,23 @@ static int may_delete(struct user_namespace *mnt_userns, struct inode *dir,
  static inline int may_create(struct user_namespace *mnt_userns,
  			     struct inode *dir, struct dentry *child)
  {
@@ -292,7 +292,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	if (child->d_inode)
  		return -EEXIST;
  	if (IS_DEADDIR(dir))
-@@ -3226,6 +3310,12 @@ static int may_open(struct user_namespace *mnt_userns, const struct path *path,
+@@ -3224,6 +3308,12 @@ static int may_open(struct user_namespace *mnt_userns, const struct path *path,
  	if (!inode)
  		return -ENOENT;
  
@@ -305,7 +305,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	switch (inode->i_mode & S_IFMT) {
  	case S_IFLNK:
  		return -ELOOP;
-@@ -3302,7 +3392,23 @@ static int may_o_create(struct user_namespace *mnt_userns,
+@@ -3300,7 +3390,23 @@ static int may_o_create(struct user_namespace *mnt_userns,
  			const struct path *dir, struct dentry *dentry,
  			umode_t mode)
  {
@@ -329,7 +329,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	if (error)
  		return error;
  
-@@ -3423,6 +3529,13 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3421,6 +3527,13 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  	}
  	if (dentry->d_inode) {
  		/* Cached positive dentry: will open in f_op->open */
@@ -343,7 +343,7 @@ index 893b1ec58c02..020cd9938f11 100644
  		return dentry;
  	}
  
-@@ -3454,6 +3567,18 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3452,6 +3565,18 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  		dentry = atomic_open(nd, dentry, file, open_flag, mode);
  		if (unlikely(create_error) && dentry == ERR_PTR(-ENOENT))
  			dentry = ERR_PTR(create_error);
@@ -362,7 +362,7 @@ index 893b1ec58c02..020cd9938f11 100644
  		return dentry;
  	}
  
-@@ -3468,6 +3593,14 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
+@@ -3466,6 +3591,14 @@ static struct dentry *lookup_open(struct nameidata *nd, struct file *file,
  			}
  			dput(dentry);
  			dentry = res;
@@ -377,7 +377,7 @@ index 893b1ec58c02..020cd9938f11 100644
  		}
  	}
  
-@@ -3800,12 +3933,19 @@ static struct file *path_openat(struct nameidata *nd,
+@@ -3798,12 +3931,19 @@ static struct file *path_openat(struct nameidata *nd,
  	return ERR_PTR(error);
  }
  
@@ -397,7 +397,7 @@ index 893b1ec58c02..020cd9938f11 100644
  
  	set_nameidata(&nd, dfd, pathname, NULL);
  	filp = path_openat(&nd, op, flags | LOOKUP_RCU);
-@@ -3813,6 +3953,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
+@@ -3811,6 +3951,25 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
  		filp = path_openat(&nd, op, flags);
  	if (unlikely(filp == ERR_PTR(-ESTALE)))
  		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
@@ -424,7 +424,7 @@ index 893b1ec58c02..020cd9938f11 100644
  	return filp;
  }
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 1533550f7356..dae7219c805c 100644
+index 59a9f877738b..9e1cd7e06f54 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -32,10 +32,36 @@
@@ -778,7 +778,7 @@ index 1533550f7356..dae7219c805c 100644
  out2:
  	unlock_mount(mp);
  out:
-@@ -3469,6 +3702,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3474,6 +3707,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	struct mount *old;
  	struct mount *new;
  	int copy_flags;
@@ -789,7 +789,7 @@ index 1533550f7356..dae7219c805c 100644
  
  	BUG_ON(!ns);
  
-@@ -3488,6 +3725,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3493,6 +3730,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
  	if (user_ns != ns->user_ns)
  		copy_flags |= CL_SHARED_TO_SLAVE;
@@ -801,7 +801,7 @@ index 1533550f7356..dae7219c805c 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -3529,6 +3771,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+@@ -3534,6 +3776,24 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
  		while (p->mnt.mnt_root != q->mnt.mnt_root)
  			p = next_mnt(p, old);
  	}
@@ -826,7 +826,7 @@ index 1533550f7356..dae7219c805c 100644
  	namespace_unlock();
  
  	if (rootmnt)
-@@ -3601,6 +3861,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
+@@ -3606,6 +3866,13 @@ SYSCALL_DEFINE5(mount, char __user *, dev_name, char __user *, dir_name,
  
  	ret = do_mount(kernel_dev, dir_name, kernel_type, flags, options);
  
@@ -840,7 +840,7 @@ index 1533550f7356..dae7219c805c 100644
  	kfree(options);
  out_data:
  	kfree(kernel_dev);
-@@ -3823,6 +4090,13 @@ SYSCALL_DEFINE5(move_mount,
+@@ -3828,6 +4095,13 @@ SYSCALL_DEFINE5(move_mount,
  	path_put(&to_path);
  out_from:
  	path_put(&from_path);
@@ -854,7 +854,7 @@ index 1533550f7356..dae7219c805c 100644
  	return ret;
  }
  
-@@ -4735,3 +5009,37 @@ static int __init init_fs_namespace_sysctls(void)
+@@ -4740,3 +5014,37 @@ static int __init init_fs_namespace_sysctls(void)
  fs_initcall(init_fs_namespace_sysctls);
  
  #endif /* CONFIG_SYSCTL */
@@ -984,7 +984,7 @@ index 55081ae3a6ec..195521b4f4bb 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index 6f1458976899..1a9dd7158cb8 100644
+index 026a4047cb5d..a28ef9a249fa 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -418,6 +418,12 @@ static const struct cred *access_override_creds(void)
@@ -1014,7 +1014,7 @@ index 6f1458976899..1a9dd7158cb8 100644
  		return -EINVAL;
  
 diff --git a/fs/overlayfs/inode.c b/fs/overlayfs/inode.c
-index 36d5b04bd61c..4b59777a2add 100644
+index abf063b5bd06..008fbded094c 100644
 --- a/fs/overlayfs/inode.c
 +++ b/fs/overlayfs/inode.c
 @@ -166,6 +166,21 @@ int ovl_getattr(struct user_namespace *mnt_userns, const struct path *path,
@@ -1722,7 +1722,7 @@ index 23baecab7cae..3207b6107474 100644
  
  static inline struct user_namespace *mnt_user_ns(const struct vfsmount *mnt)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index f5b50c82aa3a..1af2e12e802d 100644
+index d70914d7d3d4..6ac005328e49 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1552,7 +1552,11 @@ struct task_struct {
