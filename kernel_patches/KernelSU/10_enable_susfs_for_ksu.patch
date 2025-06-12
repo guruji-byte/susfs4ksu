@@ -1,5 +1,5 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..a024b10a 100644
+index 67f177f4..778f1b42 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -16,4 +16,138 @@ config KSU_DEBUG
@@ -28,7 +28,7 @@ index 67f177f4..a024b10a 100644
 +    default y
 +    help
 +      - Allow hiding the user-defined path and all its sub-paths from various system calls.
-+      - tmpfs filesystem is not allowed to be added. 
++      - Includes temp fix for the leaks of app path in /sdcard/Android/data directory.
 +      - Effective only on zygote spawned user app process.
 +      - Use with cautious as it may cause performance loss and will be vulnerable to side channel attacks,
 +        just disable this feature if it doesn't work for you or you don't need it at all.
