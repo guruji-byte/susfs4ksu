@@ -1,8 +1,8 @@
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index 67f177f4..8fba990e 100644
+index 67f177f4..a024b10a 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -16,4 +16,148 @@ config KSU_DEBUG
+@@ -16,4 +16,138 @@ config KSU_DEBUG
  	help
  	  Enable KernelSU debug mode.
  
@@ -68,16 +68,6 @@ index 67f177f4..8fba990e 100644
 +    help
 +      - Allow spoofing the kstat of user-defined file/directory.
 +      - Effective only on zygote spawned user app process.
-+
-+config KSU_SUSFS_SUS_OVERLAYFS
-+    bool "Enable to automatically spoof kstat and kstatfs for overlayed files/directories"
-+    depends on KSU_SUSFS
-+    default n
-+    help
-+      - Automatically spoof the kstat and kstatfs for overlayed files/directories.
-+      - Enable it if you are using legacy KernelSU and dont have auto hide features enabled.
-+      - No susfs command is needed in userspace.
-+      - Effective on all processes.
 +
 +config KSU_SUSFS_TRY_UMOUNT
 +    bool "Enable to use ksu's ksu_try_umount"
@@ -318,7 +308,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 56ccea07..fc7cce51 100644
+index 56ccea07..78df5ea2 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -493,7 +483,7 @@ index 56ccea07..fc7cce51 100644
  			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
  				pr_err("sepolicy: prctl reply error\n");
  			}
-@@ -412,6 +490,382 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -412,6 +490,379 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		return 0;
  	}
  
@@ -781,35 +771,32 @@ index 56ccea07..fc7cce51 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 +			enabled_features |= (1 << 4);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_SUS_OVERLAYFS
++#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 +			enabled_features |= (1 << 5);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
++#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 +			enabled_features |= (1 << 6);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
++#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 +			enabled_features |= (1 << 7);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
++#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 +			enabled_features |= (1 << 8);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
++#ifdef CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
 +			enabled_features |= (1 << 9);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
++#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 +			enabled_features |= (1 << 10);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
++#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 +			enabled_features |= (1 << 11);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
 +			enabled_features |= (1 << 12);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+			enabled_features |= (1 << 13);
-+#endif
 +#ifdef CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT
-+			enabled_features |= (1 << 14);
++			enabled_features |= (1 << 13);
 +#endif
 +			error = copy_to_user((void __user*)arg3, (void*)&enabled_features, sizeof(enabled_features));
 +			pr_info("susfs: CMD_SUSFS_SHOW_ENABLED_FEATURES -> ret: %d\n", error);
@@ -876,7 +863,7 @@ index 56ccea07..fc7cce51 100644
  	// all other cmds are for 'root manager'
  	if (!from_manager) {
  		return 0;
-@@ -477,6 +931,12 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+@@ -477,6 +928,12 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
  		}
  
  		if (enabled) {
@@ -889,7 +876,7 @@ index 56ccea07..fc7cce51 100644
  			ksu_sucompat_init();
  		} else {
  			ksu_sucompat_exit();
-@@ -515,11 +975,15 @@ static bool should_umount(struct path *path)
+@@ -515,11 +972,15 @@ static bool should_umount(struct path *path)
  		return false;
  	}
  
@@ -905,7 +892,7 @@ index 56ccea07..fc7cce51 100644
  }
  
  static void ksu_umount_mnt(struct path *path, int flags)
-@@ -530,7 +994,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
+@@ -530,7 +991,11 @@ static void ksu_umount_mnt(struct path *path, int flags)
  	}
  }
  
@@ -918,7 +905,7 @@ index 56ccea07..fc7cce51 100644
  {
  	struct path path;
  	int err = kern_path(mnt, 0, &path);
-@@ -548,9 +1016,32 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+@@ -548,9 +1013,32 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
  		return;
  	}
  
@@ -951,7 +938,7 @@ index 56ccea07..fc7cce51 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -570,6 +1061,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -570,6 +1058,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -972,7 +959,7 @@ index 56ccea07..fc7cce51 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -579,7 +1084,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -579,7 +1081,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -990,7 +977,7 @@ index 56ccea07..fc7cce51 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -588,10 +1103,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -588,10 +1100,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
@@ -1004,7 +991,7 @@ index 56ccea07..fc7cce51 100644
  	if (!is_zygote_child) {
  		pr_info("handle umount ignore non zygote child: %d\n",
  			current->pid);
-@@ -603,16 +1120,21 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -603,16 +1117,21 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		current->pid);
  #endif
  
