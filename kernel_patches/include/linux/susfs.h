@@ -32,11 +32,11 @@ struct st_susfs_sus_path {
 	unsigned int                     i_uid;
 };
 
-struct st_susfs_sus_path_hlist {
-	unsigned long                    target_ino;
+struct st_susfs_sus_path_list {
+	struct list_head                 list;
+	struct st_susfs_sus_path         info;
 	char                             target_pathname[SUSFS_MAX_LEN_PATHNAME];
-	unsigned int                     i_uid;
-	struct hlist_node                node;
+	size_t                           path_len;
 };
 #endif
 
@@ -129,6 +129,8 @@ struct st_sus_su {
 /***********************/
 /* sus_path */
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
+int susfs_set_i_state_on_external_dir(char __user* user_info, int cmd);
+int susfs_set_media_provider_uid(unsigned int uid);
 int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info);
 #endif
 /* sus_mount */
