@@ -153,6 +153,11 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 	}
 
 	if (strstr(resolved_pathname, android_data_path)) {
+		if (android_data_path[0] == '\0') {
+			err = -EINVAL;
+			SUSFS_LOGE("android_data_path is not configured yet, plz do like 'ksu_susfs set_android_data_root_path /sdcard/Android/data' first after your screen is unlocked\n");
+			goto out_kfree_tmp_buf;
+		}
 		list_for_each_entry_safe(cursor, temp, &LH_SUS_PATH_ANDROID_DATA, list) {
 			if (unlikely(!strcmp(cursor->info.target_pathname, path.dentry->d_name.name))) {
 				spin_lock(&susfs_spin_lock);
@@ -185,6 +190,11 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 		spin_unlock(&susfs_spin_lock);
 		goto out_kfree_tmp_buf;
 	} else if (strstr(resolved_pathname, sdcard_path)) {
+		if (sdcard_path[0] == '\0') {
+			err = -EINVAL;
+			SUSFS_LOGE("sdcard_path is not configured yet, plz do like 'ksu_susfs set_sdcard_root_path /sdcard' first after your screen is unlocked\n");
+			goto out_set_inode_sus_path;
+		}
 		list_for_each_entry_safe(cursor, temp, &LH_SUS_PATH_SDCARD, list) {
 			if (unlikely(!strcmp(cursor->info.target_pathname, path.dentry->d_name.name))) {
 				spin_lock(&susfs_spin_lock);
