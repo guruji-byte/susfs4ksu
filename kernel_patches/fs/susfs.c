@@ -15,7 +15,6 @@
 #include <linux/statfs.h>
 #include <linux/susfs.h>
 #include "mount.h"
-#include "fuse/fuse_i.h"
 
 static spinlock_t susfs_spin_lock;
 
@@ -298,13 +297,38 @@ bool susfs_is_sus_sdcard_d_name_found(const char *d_name) {
 	return false;
 }
 
-bool susfs_is_inode_sus_path(struct inode *inode) {
-	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH && is_i_uid_not_allowed(i_uid_into_mnt(i_user_ns(inode), inode).val))) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+bool susfs_is_inode_sus_path(struct mnt_idmap* idmap, struct inode *inode) {
+	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+		is_i_uid_not_allowed(i_uid_into_vfsuid(idmap, inode).val)))
+	{
 		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
 		return true;
 	}
 	return false;
 }
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+bool susfs_is_inode_sus_path(struct inode *inode) {
+	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+		is_i_uid_not_allowed(i_uid_into_mnt(i_user_ns(inode), inode).val)))
+	{
+		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
+		return true;
+	}
+	return false;
+}
+#else
+bool susfs_is_inode_sus_path(struct inode *inode) {
+	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+		is_i_uid_not_allowed(inode->i_uid)))
+	{
+		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
+		return true;
+	}
+	return false;
+}
+#endif
+
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 
 /* sus_mount */
