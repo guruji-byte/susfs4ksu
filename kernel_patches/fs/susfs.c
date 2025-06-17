@@ -320,7 +320,7 @@ bool susfs_is_inode_sus_path(struct inode *inode) {
 #else
 bool susfs_is_inode_sus_path(struct inode *inode) {
 	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
-		is_i_uid_not_allowed(inode->i_uid)))
+		is_i_uid_not_allowed(inode->i_uid.val)))
 	{
 		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
 		return true;
