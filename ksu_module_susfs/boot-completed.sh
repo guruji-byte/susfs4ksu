@@ -27,7 +27,7 @@ cat <<EOF >/dev/null
 until [ -d "/sdcard/Android" ]; do sleep 1; done
 
 ## Next we need to set the path of /sdcard/ to tell kernel where the actual /sdcard/Android/data is ##
-ksu_susfs set_sdcard_root_path /sdcard/Android/data
+ksu_susfs set_android_data_root_path /sdcard/Android/data
 
 ## Now we can add the path ##
 ksu_susfs add_sus_path /sdcard/Android/data/bin.mt.plus
