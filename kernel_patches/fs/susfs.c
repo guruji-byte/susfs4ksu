@@ -36,8 +36,8 @@ bool susfs_is_log_enabled __read_mostly = true;
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 static LIST_HEAD(LH_SUS_PATH_ANDROID_DATA);
 static LIST_HEAD(LH_SUS_PATH_SDCARD);
-static char android_data_path[SUSFS_MAX_LEN_PATHNAME];
-static char sdcard_path[SUSFS_MAX_LEN_PATHNAME];
+static struct st_android_data_path android_data_path = {0};
+static struct st_sdcard_path sdcard_path = {0};
 
 int susfs_set_i_state_on_external_dir(char __user* user_info, int cmd) {
 	struct path path;
@@ -82,17 +82,17 @@ int susfs_set_i_state_on_external_dir(char __user* user_info, int cmd) {
 	}
 	
 	if (cmd == CMD_SUSFS_SET_ANDROID_DATA_ROOT_PATH) {
-		spin_lock(&inode->i_lock);
-		inode->i_state |= INODE_STATE_ANDROID_DATA_ROOT_DIR;
-		spin_unlock(&inode->i_lock);
-		strncpy(android_data_path, resolved_pathname, SUSFS_MAX_LEN_PATHNAME-1);
-		SUSFS_LOGI("Set android data root dir: '%s'\n", android_data_path);
+		strncpy(android_data_path.pathname, resolved_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+		android_data_path.i_ino = inode->i_ino;
+		android_data_path.s_magic = inode->i_sb->s_magic;
+		SUSFS_LOGI("Set android data root dir: '%s', ino: '%lu', magic: '%lu'\n",
+			android_data_path.pathname, android_data_path.i_ino, android_data_path.s_magic);
 	} else if (cmd == CMD_SUSFS_SET_SDCARD_ROOT_PATH) {
-		spin_lock(&inode->i_lock);
-		inode->i_state |= INODE_STATE_SDCARD_ROOT_DIR;
-		spin_unlock(&inode->i_lock);
-		strncpy(sdcard_path, resolved_pathname, SUSFS_MAX_LEN_PATHNAME-1);
-		SUSFS_LOGI("Set sdcard root dir: '%s'\n", sdcard_path);
+		strncpy(sdcard_path.pathname, resolved_pathname, SUSFS_MAX_LEN_PATHNAME-1);
+		sdcard_path.i_ino = inode->i_ino;
+		sdcard_path.s_magic = inode->i_sb->s_magic;
+		SUSFS_LOGI("Set sdcard root dir: '%s', ino: '%lu', magic: '%lu'\n",
+			sdcard_path.pathname, sdcard_path.i_ino, sdcard_path.s_magic);
 	} else {
 		err = -EINVAL;
 	}
@@ -145,14 +145,8 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 		goto out_kfree_tmp_buf;
 	}
 
-	if (android_data_path[0] == '\0' || sdcard_path[0] == '\0') {
-		err = -EINVAL;
-		SUSFS_LOGE("android_data_path or sdcard_path is not configured yet\n");
-		goto out_kfree_tmp_buf;
-	}
-
-	if (strstr(resolved_pathname, android_data_path)) {
-		if (android_data_path[0] == '\0') {
+	if (strstr(resolved_pathname, android_data_path.pathname)) {
+		if (android_data_path.i_ino == 0) {
 			err = -EINVAL;
 			SUSFS_LOGE("android_data_path is not configured yet, plz do like 'ksu_susfs set_android_data_root_path /sdcard/Android/data' first after your screen is unlocked\n");
 			goto out_kfree_tmp_buf;
@@ -188,11 +182,11 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 					new_list->info.target_ino, new_list->target_pathname, new_list->info.i_uid);
 		spin_unlock(&susfs_spin_lock);
 		goto out_kfree_tmp_buf;
-	} else if (strstr(resolved_pathname, sdcard_path)) {
-		if (sdcard_path[0] == '\0') {
+	} else if (strstr(resolved_pathname, sdcard_path.pathname)) {
+		if (sdcard_path.i_ino ==  0) {
 			err = -EINVAL;
 			SUSFS_LOGE("sdcard_path is not configured yet, plz do like 'ksu_susfs set_sdcard_root_path /sdcard' first after your screen is unlocked\n");
-			goto out_set_inode_sus_path;
+			goto out_kfree_tmp_buf;
 		}
 		list_for_each_entry_safe(cursor, temp, &LH_SUS_PATH_SDCARD, list) {
 			if (unlikely(!strcmp(cursor->info.target_pathname, path.dentry->d_name.name))) {
@@ -205,13 +199,13 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 				SUSFS_LOGI("target_ino: '%lu', target_pathname: '%s', i_uid: '%u', is successfully updated to LH_SUS_PATH_SDCARD\n",
 							cursor->info.target_ino, cursor->target_pathname, cursor->info.i_uid);
 				spin_unlock(&susfs_spin_lock);
-				goto out_set_inode_sus_path;
+				goto out_kfree_tmp_buf;
 			}
 		}
 		new_list = kmalloc(sizeof(struct st_susfs_sus_path_list), GFP_KERNEL);
 		if (!new_list) {
 			err = -ENOMEM;
-			goto out_set_inode_sus_path;
+			goto out_kfree_tmp_buf;
 		}
 		new_list->info.target_ino = info.target_ino;
 		strncpy(new_list->info.target_pathname, path.dentry->d_name.name, SUSFS_MAX_LEN_PATHNAME - 1);
@@ -224,10 +218,9 @@ int susfs_add_sus_path(struct st_susfs_sus_path* __user user_info) {
 		SUSFS_LOGI("target_ino: '%lu', target_pathname: '%s', i_uid: '%u', is successfully added to LH_SUS_PATH_SDCARD\n",
 					new_list->info.target_ino, new_list->target_pathname, new_list->info.i_uid);
 		spin_unlock(&susfs_spin_lock);
-		goto out_set_inode_sus_path;
+		goto out_kfree_tmp_buf;
 	}
 
-out_set_inode_sus_path:
 	spin_lock(&inode->i_lock);
 	inode->i_state |= INODE_STATE_SUS_PATH;
 	SUSFS_LOGI("pathname: '%s', ino: '%lu', is flagged as INODE_STATE_SUS_PATH\n", resolved_pathname, info.target_ino);
@@ -246,7 +239,7 @@ static inline bool is_i_uid_in_android_data_not_allowed(uid_t i_uid) {
 							(unlikely(cur_uid != i_uid)));
 }
 
-static inline bool is_i_uid_in_sdcard_not_allowed(uid_t i_uid) {
+static inline bool is_i_uid_in_sdcard_not_allowed(void) {
 	return (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC));
 }
 
@@ -255,6 +248,16 @@ static inline bool is_i_uid_not_allowed(uid_t i_uid) {
 
 	return (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) &&
 							(unlikely(cur_uid != i_uid)));
+}
+
+bool susfs_is_base_dentry_android_data_dir(struct dentry* base) {
+	return ((base->d_sb->s_magic == android_data_path.s_magic) &&
+			(base->d_inode->i_ino == android_data_path.i_ino));
+}
+
+bool susfs_is_base_dentry_sdcard_dir(struct dentry* base) {
+	return ((base->d_sb->s_magic == sdcard_path.s_magic) &&
+			(base->d_inode->i_ino == sdcard_path.i_ino));
 }
 
 bool susfs_is_sus_android_data_d_name_found(const char *d_name) {
@@ -288,7 +291,7 @@ bool susfs_is_sus_sdcard_d_name_found(const char *d_name) {
 	list_for_each_entry_safe(cursor, temp, &LH_SUS_PATH_SDCARD, list) {
 		if (!strncmp(d_name, cursor->info.target_pathname, cursor->path_len) &&
 		    (d_name[cursor->path_len] == '\0' || d_name[cursor->path_len] == '/') &&
-			is_i_uid_in_sdcard_not_allowed(cursor->info.i_uid))
+			is_i_uid_in_sdcard_not_allowed())
 		{
 			SUSFS_LOGI("hiding path '%s'\n", cursor->target_pathname);
 			return true;
@@ -299,30 +302,30 @@ bool susfs_is_sus_sdcard_d_name_found(const char *d_name) {
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
 bool susfs_is_inode_sus_path(struct mnt_idmap* idmap, struct inode *inode) {
-	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
 		is_i_uid_not_allowed(i_uid_into_vfsuid(idmap, inode).val)))
 	{
-		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
+		SUSFS_LOGI("hiding path with ino '%lu'\n", inode->i_ino);
 		return true;
 	}
 	return false;
 }
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
 bool susfs_is_inode_sus_path(struct inode *inode) {
-	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
 		is_i_uid_not_allowed(i_uid_into_mnt(i_user_ns(inode), inode).val)))
 	{
-		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
+		SUSFS_LOGI("hiding path with ino '%lu'\n", inode->i_ino);
 		return true;
 	}
 	return false;
 }
 #else
 bool susfs_is_inode_sus_path(struct inode *inode) {
-	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
+	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH &&
 		is_i_uid_not_allowed(inode->i_uid.val)))
 	{
-		SUSFS_LOGI("hidding path with ino '%lu'\n", inode->i_ino);
+		SUSFS_LOGI("hiding path with ino '%lu'\n", inode->i_ino);
 		return true;
 	}
 	return false;

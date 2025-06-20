@@ -38,6 +38,18 @@ struct st_susfs_sus_path_list {
 	char                             target_pathname[SUSFS_MAX_LEN_PATHNAME];
 	size_t                           path_len;
 };
+
+struct st_android_data_path {
+	unsigned long                    i_ino;
+	unsigned long                    s_magic;
+	char                             pathname[SUSFS_MAX_LEN_PATHNAME];
+};
+
+struct st_sdcard_path {
+	unsigned long                    i_ino;
+	unsigned long                    s_magic;
+	char                             pathname[SUSFS_MAX_LEN_PATHNAME];
+};
 #endif
 
 /* sus_mount */

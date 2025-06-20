@@ -57,6 +57,11 @@
 
 #define TASK_STRUCT_NON_ROOT_USER_APP_PROC BIT(24)
 
+#define ND_STATE_FILENAME_CREATE 8
+#define ND_STATE_RENAMEAT 16
+#define LOOKUP_FILENAME_CREATE		0x800000
+#define LOOKUP_RENAMEAT		0x1000000
+
 #define MAGIC_MOUNT_WORKDIR "/debug_ramdisk/workdir"
 #define DATA_ADB_UMOUNT_FOR_ZYGOTE_SYSTEM_PROCESS "/data/adb/susfs_umount_for_zygote_system_process"
 #define DATA_ADB_NO_AUTO_ADD_SUS_BIND_MOUNT "/data/adb/susfs_no_auto_add_sus_bind_mount"
