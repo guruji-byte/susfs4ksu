@@ -70,7 +70,7 @@ index 52fe9b4b05e4..1f40a558ae82 100644
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
 diff --git a/fs/namei.c b/fs/namei.c
-index a3922d96fac9..9c7eafed2c55 100644
+index a3922d96fac9..2938ddedb59f 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,10 +39,22 @@
@@ -168,7 +168,7 @@ index a3922d96fac9..9c7eafed2c55 100644
  	if (nd->flags & LOOKUP_RCU) {
  		unsigned seq;
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-+		unsigned int backup_next_seq;
++		unsigned backup_next_seq;
 +
 +		if (parent->d_inode && (nd->state & ND_STATE_LOOKUP_LAST || nd->state & ND_STATE_OPEN_LAST)) {
 +			if (susfs_is_base_dentry_sdcard_dir(parent) &&
