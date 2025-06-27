@@ -1272,7 +1272,7 @@ index 49650e54d2f8..9518e9f53694 100644
  	if (sb->s_op->show_devname) {
  		seq_puts(m, "device ");
 diff --git a/fs/readdir.c b/fs/readdir.c
-index 09e8ed7d4161..49c1f8b65f67 100644
+index 09e8ed7d4161..fe6c96984ae4 100644
 --- a/fs/readdir.c
 +++ b/fs/readdir.c
 @@ -24,6 +24,14 @@
@@ -1319,11 +1319,11 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (buf->is_base_dentry_android_data_root_dir) {
 +		if (susfs_is_sus_android_data_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	} else if (buf->is_base_dentry_sdcard_root_dir) {
 +		if (susfs_is_sus_sdcard_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	}
 +
@@ -1333,7 +1333,7 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +	}
 +	if (susfs_is_inode_sus_path(inode)) {
 +		iput(inode);
-+		return true;
++		return 0;
 +	}
 +	iput(inode);
 +orig_flow:
@@ -1405,11 +1405,11 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (buf->is_base_dentry_android_data_root_dir) {
 +		if (susfs_is_sus_android_data_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	} else if (buf->is_base_dentry_sdcard_root_dir) {
 +		if (susfs_is_sus_sdcard_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	}
 +
@@ -1419,7 +1419,7 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +	}
 +	if (susfs_is_inode_sus_path(inode)) {
 +		iput(inode);
-+		return true;
++		return 0;
 +	}
 +	iput(inode);
 +orig_flow:
@@ -1493,11 +1493,11 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (buf->is_base_dentry_android_data_root_dir) {
 +		if (susfs_is_sus_android_data_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	} else if (buf->is_base_dentry_sdcard_root_dir) {
 +		if (susfs_is_sus_sdcard_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	}
 +
@@ -1507,7 +1507,7 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +	}
 +	if (susfs_is_inode_sus_path(inode)) {
 +		iput(inode);
-+		return true;
++		return 0;
 +	}
 +	iput(inode);
 +orig_flow:
@@ -1580,11 +1580,11 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (buf->is_base_dentry_android_data_root_dir) {
 +		if (susfs_is_sus_android_data_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	} else if (buf->is_base_dentry_sdcard_root_dir) {
 +		if (susfs_is_sus_sdcard_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	}
 +
@@ -1594,7 +1594,7 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +	}
 +	if (susfs_is_inode_sus_path(inode)) {
 +		iput(inode);
-+		return true;
++		return 0;
 +	}
 +	iput(inode);
 +orig_flow:
@@ -1666,11 +1666,11 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +#ifdef CONFIG_KSU_SUSFS_SUS_PATH
 +	if (buf->is_base_dentry_android_data_root_dir) {
 +		if (susfs_is_sus_android_data_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	} else if (buf->is_base_dentry_sdcard_root_dir) {
 +		if (susfs_is_sus_sdcard_d_name_found(name)) {
-+			return true;
++			return 0;
 +		}
 +	}
 +
@@ -1680,7 +1680,7 @@ index 09e8ed7d4161..49c1f8b65f67 100644
 +	}
 +	if (susfs_is_inode_sus_path(inode)) {
 +		iput(inode);
-+		return true;
++		return 0;
 +	}
 +	iput(inode);
 +orig_flow:
