@@ -4,6 +4,8 @@ This module is used for installing a userspace helper tool called **ksu_susfs** 
 
 - To enable umount for zygote spawned system process on boot, create a new file to `/data/adb/susfs_umount_for_zygote_system_process` and reboot.
 
+- To enable umount for zygote spawned isolated service process on boot, create a new file to `/data/adb/susfs_umount_for_zygote_iso_service` and reboot.
+
 - To disable `KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT` on boot, create a new file to `/data/adb/susfs_no_auto_add_sus_ksu_default_mount` and reboot.
 
 - To disable `KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT` on boot, create a new file to `/data/adb/susfs_no_auto_add_sus_bind_mount` and reboot.
