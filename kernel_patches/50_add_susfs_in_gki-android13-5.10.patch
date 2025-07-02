@@ -1902,10 +1902,10 @@ index 2f64e66f9c8c..591bca2a690b 100644
  
  struct file; /* forward dec */
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 5eeecffcb6d6..b3d3fd70dd63 100644
+index 5eeecffcb6d6..194a8c63455f 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1388,8 +1388,16 @@ struct task_struct {
+@@ -1388,7 +1388,11 @@ struct task_struct {
  	ANDROID_KABI_RESERVE(4);
  	ANDROID_KABI_RESERVE(5);
  	ANDROID_KABI_RESERVE(6);
@@ -1914,14 +1914,9 @@ index 5eeecffcb6d6..b3d3fd70dd63 100644
 +#else
  	ANDROID_KABI_RESERVE(7);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS
-+	ANDROID_KABI_USE(8, u64 susfs_last_fake_mnt_id);
-+#else
  	ANDROID_KABI_RESERVE(8);
-+#endif
  
  	/*
- 	 * New fields for task_struct should be added above here, so that
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index 96505113b907..de70a3b01324 100644
 --- a/kernel/kallsyms.c
