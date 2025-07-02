@@ -1878,10 +1878,10 @@ index 9fc799307..0da7c62eb 100644
  
  static inline struct user_namespace *mnt_user_ns(const struct vfsmount *mnt)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9c315023a..023c2899a 100644
+index 9c315023a..d5ab7ca9c 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1514,8 +1514,16 @@ struct task_struct {
+@@ -1514,7 +1514,11 @@ struct task_struct {
  	ANDROID_KABI_RESERVE(4);
  	ANDROID_KABI_RESERVE(5);
  	ANDROID_KABI_RESERVE(6);
@@ -1890,14 +1890,9 @@ index 9c315023a..023c2899a 100644
 +#else
  	ANDROID_KABI_RESERVE(7);
 +#endif
-+#ifdef CONFIG_KSU_SUSFS
-+	ANDROID_KABI_USE(8, u64 susfs_last_fake_mnt_id);
-+#else
  	ANDROID_KABI_RESERVE(8);
-+#endif
  
  	/*
- 	 * New fields for task_struct should be added above here, so that
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index e0d9f77cf..e2d41cc3d 100644
 --- a/kernel/kallsyms.c
