@@ -1902,22 +1902,6 @@ index 2f64e66f9c8c..591bca2a690b 100644
  } __randomize_layout;
  
  struct file; /* forward dec */
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 331ec7988028..9954bf2cdfc7 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1383,7 +1383,11 @@ struct task_struct {
- 	ANDROID_KABI_RESERVE(4);
- 	ANDROID_KABI_RESERVE(5);
- 	ANDROID_KABI_RESERVE(6);
-+#ifdef CONFIG_KSU_SUSFS
-+	ANDROID_KABI_USE(7, u64 susfs_task_state);
-+#else
- 	ANDROID_KABI_RESERVE(7);
-+#endif
- 	ANDROID_KABI_RESERVE(8);
- 
- 	/*
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index 96505113b907..de70a3b01324 100644
 --- a/kernel/kallsyms.c
