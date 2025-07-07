@@ -1878,22 +1878,6 @@ index 9fc79930799e..0da7c62eb846 100644
  } __randomize_layout;
  
  static inline struct user_namespace *mnt_user_ns(const struct vfsmount *mnt)
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index f958d47f8ed1..f81a1a41ccd5 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1514,7 +1514,11 @@ struct task_struct {
- 	ANDROID_KABI_RESERVE(4);
- 	ANDROID_KABI_RESERVE(5);
- 	ANDROID_KABI_RESERVE(6);
-+#ifdef CONFIG_KSU_SUSFS
-+	ANDROID_KABI_USE(7, u64 susfs_task_state);
-+#else
- 	ANDROID_KABI_RESERVE(7);
-+#endif
- 	ANDROID_KABI_RESERVE(8);
- 
- 	/*
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index e0d9f77cf2d4..e2d41cc3d3ad 100644
 --- a/kernel/kallsyms.c
