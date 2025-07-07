@@ -46,14 +46,16 @@
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
  * mount->mnt.susfs_mnt_id_backup => storing original mnt_id of normal mounts or custom sus mnt_id of sus mounts
- * task_struct->susfs_task_state => storing flag 'TASK_STRUCT_'
+ * inode->i_mapping->flags => storing flag 'AS_FLAGS_'
+ * nd->state => storing flag 'ND_STATE_'
+ * nd->flags => storing flag 'ND_FLAGS_'
+ * task_struct->thread_info.flags => storing flag 'TIF_'
  */
 #define INODE_STATE_SUS_PATH BIT(24)
 #define INODE_STATE_SUS_MOUNT BIT(25)
 #define INODE_STATE_SUS_KSTAT BIT(26)
 #define INODE_STATE_OPEN_REDIRECT BIT(27)
 
-//#define TASK_STRUCT_NON_ROOT_USER_APP_PROC BIT(24)
 #define TIF_NON_ROOT_USER_APP_PROC 33 // thread_info->flags is unsigned long :D
 
 #define AS_FLAGS_ANDROID_DATA_ROOT_DIR 28
@@ -72,7 +74,6 @@
 #define DATA_ADB_NO_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT "/data/adb/susfs_no_auto_add_sus_ksu_default_mount"
 #define DATA_ADB_NO_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT "/data/adb/susfs_no_auto_add_try_umount_for_bind_mount"
 
-#ifdef CONFIG_THREAD_INFO_IN_TASK
 static inline bool susfs_is_current_non_root_user_app_proc(void) {
 	return test_ti_thread_flag(&current->thread_info, TIF_NON_ROOT_USER_APP_PROC);
 }
@@ -80,7 +81,6 @@ static inline bool susfs_is_current_non_root_user_app_proc(void) {
 static inline void susfs_set_current_non_root_user_app_proc(void) {
 	set_ti_thread_flag(&current->thread_info, TIF_NON_ROOT_USER_APP_PROC);
 }
-#endif
 
 
 #endif // #ifndef KSU_SUSFS_DEF_H
