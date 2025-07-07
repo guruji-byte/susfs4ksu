@@ -1074,7 +1074,7 @@ index 08d502aae6f9..7b6cb9a56aae 100644
 +}
 +#endif
 diff --git a/fs/notify/fdinfo.c b/fs/notify/fdinfo.c
-index 5c430736ec12..6ca4ee06d6ed 100644
+index 5c430736ec12..915bba9acf6d 100644
 --- a/fs/notify/fdinfo.c
 +++ b/fs/notify/fdinfo.c
 @@ -12,6 +12,9 @@
@@ -1132,7 +1132,7 @@ index 5c430736ec12..6ca4ee06d6ed 100644
  	inode = igrab(fsnotify_conn_inode(mark->connector));
  	if (inode) {
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+		if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) &&
++		if (likely(susfs_is_current_non_root_user_app_proc()) &&
 +				unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
 +			struct path path;
 +			char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
@@ -1219,7 +1219,7 @@ index 2e244ada1f97..792e1cb04b11 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/fd.c b/fs/proc/fd.c
-index 4297287f6ca0..f79e02c87459 100644
+index 4297287f6ca0..05500a675cbf 100644
 --- a/fs/proc/fd.c
 +++ b/fs/proc/fd.c
 @@ -15,6 +15,9 @@
@@ -1248,7 +1248,7 @@ index 4297287f6ca0..f79e02c87459 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	mnt = real_mount(file->f_path.mnt);
-+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) &&
++	if (likely(susfs_is_current_non_root_user_app_proc()) &&
 +			mnt->mnt_id >= DEFAULT_SUS_MNT_ID) {
 +		struct path path;
 +		char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
@@ -1863,7 +1863,7 @@ index c8c46e294431..121909714b15 100644
  	if (error >= 0)
  		error = buf.error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 517fa4ed885e..fcf350e07864 100644
+index 517fa4ed885e..ac101e0c0174 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -20,12 +20,19 @@
@@ -1891,7 +1891,7 @@ index 517fa4ed885e..fcf350e07864 100644
  	vfsgid_t vfsgid = i_gid_into_vfsgid(idmap, inode);
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) &&
++	if (likely(susfs_is_current_non_root_user_app_proc()) &&
 +			unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
 +		susfs_sus_ino_for_generic_fillattr(inode->i_ino, stat);
 +		stat->mode = inode->i_mode;
@@ -1920,7 +1920,7 @@ index 517fa4ed885e..fcf350e07864 100644
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +	mnt = real_mount(path.mnt);
-+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (likely(susfs_is_current_non_root_user_app_proc())) {
 +		for (; mnt->mnt_id >= DEFAULT_SUS_MNT_ID; mnt = mnt->mnt_parent) {}
 +	}
 +	stat->mnt_id = mnt->mnt_id;
@@ -1961,7 +1961,7 @@ index 517fa4ed885e..fcf350e07864 100644
  	putname(name);
  
 diff --git a/fs/statfs.c b/fs/statfs.c
-index 2a37f9f3dba1..11247fa2924f 100644
+index 2a37f9f3dba1..af5e5a6ca44c 100644
 --- a/fs/statfs.c
 +++ b/fs/statfs.c
 @@ -9,6 +9,10 @@
@@ -1983,7 +1983,7 @@ index 2a37f9f3dba1..11247fa2924f 100644
 +	struct mount *mnt;
  
 +	mnt = real_mount(path->mnt);
-+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
++	if (likely(susfs_is_current_non_root_user_app_proc())) {
 +		for (; mnt->mnt_id >= DEFAULT_SUS_MNT_ID; mnt = mnt->mnt_parent) {}
 +	}
 +	error = statfs_by_dentry(mnt->mnt.mnt_root, buf);
