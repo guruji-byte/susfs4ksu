@@ -2027,22 +2027,6 @@ index 4e1f330f101c..c2386e5a5458 100644
  } __randomize_layout;
  
  static inline struct mnt_idmap *mnt_idmap(const struct vfsmount *mnt)
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 4d39fb0f5cb7..b8de6dc51a0e 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1522,7 +1522,11 @@ struct task_struct {
- 	ANDROID_KABI_RESERVE(4);
- 	ANDROID_KABI_RESERVE(5);
- 	ANDROID_KABI_RESERVE(6);
-+#ifdef CONFIG_KSU_SUSFS
-+	ANDROID_KABI_USE(7, u64 susfs_task_state);
-+#else
- 	ANDROID_KABI_RESERVE(7);
-+#endif
- 	ANDROID_KABI_RESERVE(8);
- 
- #ifdef CONFIG_RV
 diff --git a/kernel/kallsyms.c b/kernel/kallsyms.c
 index 18edd57b5fe8..e2c695aa242c 100644
 --- a/kernel/kallsyms.c
