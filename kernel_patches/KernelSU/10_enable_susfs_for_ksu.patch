@@ -309,7 +309,7 @@ index bed501c4..e02aa514 100644
  
  #endif
 diff --git a/kernel/core_hook.c b/kernel/core_hook.c
-index 56ccea07..fc13b2af 100644
+index 56ccea07..02501b09 100644
 --- a/kernel/core_hook.c
 +++ b/kernel/core_hook.c
 @@ -33,6 +33,10 @@
@@ -916,7 +916,7 @@ index 56ccea07..fc13b2af 100644
  int ksu_handle_setuid(struct cred *new, const struct cred *old)
  {
  	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
-@@ -570,6 +1031,55 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -570,6 +1031,52 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		return 0;
  	}
  
@@ -931,7 +931,7 @@ index 56ccea07..fc13b2af 100644
 +			// set flag if zygote spawned system process is allowed for root access
 +			if (!ksu_is_allow_uid(new_uid.val)) {
 +				task_lock(current);
-+				susfs_set_current_proc_root_not_allowed();
++				susfs_set_current_proc_su_not_allowed();
 +				task_unlock(current);
 +			}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
@@ -951,20 +951,17 @@ index 56ccea07..fc13b2af 100644
 +		// - Kudos to ThePedroo, the author and maintainer of Rezygisk for finding and reporting
 +		//   the detection, really big helps here!
 +		else if (new_uid.val >= 90000 && new_uid.val < 1000000) {
++			task_lock(current);
++			susfs_set_current_non_root_user_app_proc();
++#ifdef CONFIG_KSU_SUSFS_SUS_SU
++			susfs_set_current_proc_su_not_allowed();
++#endif
++			task_unlock(current);
 +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 +			if (susfs_is_umount_for_zygote_iso_service_enabled) {
-+				task_lock(current);
-+				susfs_set_current_non_root_user_app_proc();
-+				task_unlock(current);
 +				goto out_susfs_try_umount_all;
 +			}
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+			// We always don't allow root for iso services.
-+			task_lock(current);
-+			susfs_set_current_proc_root_not_allowed();
-+			task_unlock(current);
-+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +		}
 +	}
 +#endif // #ifdef CONFIG_KSU_SUSFS
@@ -972,7 +969,7 @@ index 56ccea07..fc13b2af 100644
  	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
  		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
  		return 0;
-@@ -579,7 +1089,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -579,7 +1086,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
  		return 0;
  	}
@@ -981,7 +978,7 @@ index 56ccea07..fc13b2af 100644
 +		task_lock(current);
 +		susfs_set_current_non_root_user_app_proc();
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+		susfs_set_current_proc_root_not_allowed();
++		susfs_set_current_proc_su_not_allowed();
 +#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 +		task_unlock(current);
 +	}
@@ -993,7 +990,7 @@ index 56ccea07..fc13b2af 100644
  	if (!ksu_uid_should_umount(new_uid.val)) {
  		return 0;
  	} else {
-@@ -588,10 +1111,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -588,10 +1108,12 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  #endif
  	}
  
@@ -1007,7 +1004,7 @@ index 56ccea07..fc13b2af 100644
  	if (!is_zygote_child) {
  		pr_info("handle umount ignore non zygote child: %d\n",
  			current->pid);
-@@ -603,16 +1128,22 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
+@@ -603,16 +1125,22 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
  		current->pid);
  #endif
  

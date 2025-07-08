@@ -12,7 +12,7 @@ index 102e4cd2bf69..a1929dbc8b8c 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
-index 4f25015aa534..f417cf62f203 100644
+index 4f25015aa534..f1394c6915f1 100644
 --- a/fs/devpts/inode.c
 +++ b/fs/devpts/inode.c
 @@ -24,6 +24,9 @@
@@ -42,7 +42,7 @@ index 4f25015aa534..f417cf62f203 100644
  void *devpts_get_priv(struct dentry *dentry)
  {
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+	if (likely(susfs_is_current_proc_root_not_allowed())) {
++	if (likely(susfs_is_current_proc_su_not_allowed())) {
 +		goto orig_flow;
 +	}
 +	if (likely(ksu_devpts_hook)) {
@@ -55,7 +55,7 @@ index 4f25015aa534..f417cf62f203 100644
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/exec.c b/fs/exec.c
-index 0149f828d409..28714fba6bc5 100644
+index 0149f828d409..10ace8222a69 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -66,6 +66,9 @@
@@ -87,7 +87,7 @@ index 0149f828d409..28714fba6bc5 100644
  		return PTR_ERR(filename);
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+	if (likely(susfs_is_current_proc_root_not_allowed())) {
++	if (likely(susfs_is_current_proc_su_not_allowed())) {
 +		goto orig_flow;
 +	}
 +	if (likely(susfs_is_sus_su_hooks_enabled) &&
@@ -1077,7 +1077,7 @@ index 55081ae3a6ec..e88698ee80eb 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index 026a4047cb5d..5eb5eeb78683 100644
+index 026a4047cb5d..f5a50cc9cd12 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -33,6 +33,9 @@
@@ -1109,7 +1109,7 @@ index 026a4047cb5d..5eb5eeb78683 100644
  	const struct cred *old_cred = NULL;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+	if (likely(susfs_is_current_proc_root_not_allowed())) {
++	if (likely(susfs_is_current_proc_su_not_allowed())) {
 +		goto orig_flow;
 +	}
 +	if (likely(susfs_is_sus_su_hooks_enabled) &&
@@ -1782,7 +1782,7 @@ index 9c53edb60c03..219685cc3c19 100644
  	if (error >= 0)
  		error = buf.error;
 diff --git a/fs/stat.c b/fs/stat.c
-index ef50573c72a2..ba9631134003 100644
+index ef50573c72a2..f46265794b0f 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -19,12 +19,19 @@
@@ -1867,7 +1867,7 @@ index ef50573c72a2..ba9631134003 100644
  	struct filename *name;
  
 +#ifdef CONFIG_KSU_SUSFS_SUS_SU
-+	if (likely(susfs_is_current_proc_root_not_allowed())) {
++	if (likely(susfs_is_current_proc_su_not_allowed())) {
 +		goto orig_flow1;
 +	}
 +	if (likely(susfs_is_sus_su_hooks_enabled) &&
