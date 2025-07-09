@@ -45,6 +45,7 @@ It will also copy the ksu_susfs tool to `/data/adb/ksu/bin/` as well when instal
 ## Credits ##
 - KernelSU: https://github.com/tiann/KernelSU
 - @Kartatz: for ideas and original commit from https://github.com/Dominium-Apum/kernel_xiaomi_chime/pull/1/commits/74f8d4ecacd343432bb8137b7e7fbe3fd9fef189
+- @simonpunk
 
 ## Telegram ##
 - @simonpunk
