@@ -1,0 +1,41 @@
+name: GitLab to GitHub Mirror
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v4
+
+      - name: Add GitLab as upstream and fetch
+        run: |
+          git remote add upstream https://gitlab.com/simonpunk/susfs4ksu.git || echo "Upstream already exists"
+          git fetch upstream
+
+      - name: Sync all branches
+        run: |
+          branches=(master gki-android12-5.10 gki-android13-5.10 gki-android13-5.15 gki-android14-5.15 gki-android14-6.1 gki-android15-6.6 kernel-4.14 kernel-4.19 kernel-4.9 kernel-5.4)
+
+          for branch in "${branches[@]}"; do
+            echo "Processing branch: $branch"
+
+            if git show-ref --verify --quiet refs/heads/$branch; then
+              git checkout $branch
+            else
+              git checkout -b $branch upstream/$branch
+            fi
+
+            git merge upstream/$branch --allow-unrelated-histories || true
+            git push origin $branch
+          done
+
+      - name: Push all tags
+        run: |
+          git push origin --tags
+
