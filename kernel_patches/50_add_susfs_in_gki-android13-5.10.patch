@@ -92,7 +92,7 @@ index b64819a80..4a1546ea1 100644
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
 diff --git a/fs/namei.c b/fs/namei.c
-index f630d4815..a15831f02 100644
+index f630d4815..bd3b873e1 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
@@ -397,7 +397,7 @@ index f630d4815..a15831f02 100644
 +		if (fake_filename && !IS_ERR(fake_filename)) {
 +			path_put(&path);
 +			restore_nameidata();
-+			set_nameidata(nd, old_dfd, fake_filename, NULL);
++			set_nameidata(nd, old_dfd, fake_filename);
 +			error = path_lookupat(nd, flags | LOOKUP_DIRECTORY, &path);
 +			if (unlikely(error)) {
 +				putname(fake_filename);
@@ -437,7 +437,7 @@ index f630d4815..a15831f02 100644
 +			if (fake_filename && !IS_ERR(fake_filename)) {
 +				path_put(&path);
 +				restore_nameidata();
-+				set_nameidata(nd, old_dfd, fake_filename, NULL);
++				set_nameidata(nd, old_dfd, fake_filename);
 +				error = path_lookupat(nd, flags, &path);
 +				if (unlikely(error)) {
 +					putname(fake_filename);
@@ -480,7 +480,7 @@ index f630d4815..a15831f02 100644
 +				const char *new_s = NULL;
 +				terminate_walk(nd);
 +				restore_nameidata();
-+				set_nameidata(nd, old_dfd, fake_filename, NULL);
++				set_nameidata(nd, old_dfd, fake_filename);
 +				new_s = path_init(nd, flags);
 +				while (!(error = link_path_walk(new_s, nd)) &&
 +				       (new_s = open_last_lookups(nd, file, op)) != NULL)
