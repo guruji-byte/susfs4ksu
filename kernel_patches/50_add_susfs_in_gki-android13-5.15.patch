@@ -42,7 +42,7 @@ index e4adb9882..2461d8986 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/exec.c b/fs/exec.c
-index b1b9db56a..23ac91679 100644
+index b1b9db56a..5e3f5f206 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -65,6 +65,9 @@
@@ -77,7 +77,7 @@ index b1b9db56a..23ac91679 100644
  		return PTR_ERR(filename);
  
 +#ifdef CONFIG_KSU_SUSFS
-+	if (likely(susfs_is_current_proc_umounted()))
++	if (likely(susfs_is_current_proc_no_su()))
 +		goto orig_flow;
 +
 +	if (static_branch_likely(&ksu_su_compat_enabled)) {
@@ -942,7 +942,7 @@ index 3451708fd..7395a4a0a 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index 39779f1ba..24fd8c6af 100644
+index 39779f1ba..9f9cdac82 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -33,6 +33,9 @@
@@ -974,7 +974,7 @@ index 39779f1ba..24fd8c6af 100644
  	const struct cred *old_cred = NULL;
  
 +#ifdef CONFIG_KSU_SUSFS
-+	if (likely(susfs_is_current_proc_umounted()))
++	if (likely(susfs_is_current_proc_no_su()))
 +		goto orig_flow;
 +
 +	if (static_branch_likely(&ksu_su_compat_enabled)) {
@@ -1820,7 +1820,7 @@ index 09e8ed7d4..419947280 100644
  	if (error >= 0)
  		error = buf.error;
 diff --git a/fs/stat.c b/fs/stat.c
-index 357a1db41..b745d6378 100644
+index 357a1db41..726a301a9 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -18,12 +18,23 @@
@@ -1920,7 +1920,7 @@ index 357a1db41..b745d6378 100644
  	int error;
  
 +#ifdef CONFIG_KSU_SUSFS
-+	if (likely(susfs_is_current_proc_umounted()))
++	if (likely(susfs_is_current_proc_no_su()))
 +		goto orig_flow;
 +
 +	if (static_branch_likely(&ksu_su_compat_enabled)) {
