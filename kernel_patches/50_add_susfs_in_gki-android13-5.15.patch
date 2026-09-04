@@ -1082,7 +1082,7 @@ index 7624ae2c1..79f326d45 100644
  static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  {
  	char *tmp = (char *)__get_free_page(GFP_KERNEL);
-@@ -1832,6 +1840,18 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
+@@ -1832,6 +1840,17 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  	if (!tmp)
  		return -ENOMEM;
  
@@ -1092,8 +1092,7 @@ index 7624ae2c1..79f326d45 100644
 +			len = strlen(tmp);
 +			if (copy_to_user(buffer, tmp, len))
 +				len = -EFAULT;
-+			kfree(tmp);
-+			return len;
++			goto out;
 +		}
 +	}
 +#endif
@@ -1101,7 +1100,7 @@ index 7624ae2c1..79f326d45 100644
  	pathname = d_path(path, tmp, PAGE_SIZE);
  	len = PTR_ERR(pathname);
  	if (IS_ERR(pathname))
-@@ -2451,6 +2471,10 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2451,6 +2470,10 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  	for (vma = mm->mmap, pos = 2; vma; vma = vma->vm_next) {
  		if (!vma->vm_file)
  			continue;
