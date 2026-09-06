@@ -42,7 +42,7 @@ index e4adb9882..2461d8986 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/exec.c b/fs/exec.c
-index b70f5fc73..356ddcf16 100644
+index b70f5fc73..fb0b60bf9 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -65,6 +65,9 @@
@@ -55,7 +55,7 @@ index b70f5fc73..356ddcf16 100644
  
  #include <linux/uaccess.h>
  #include <asm/mmu_context.h>
-@@ -1885,6 +1888,16 @@ static int bprm_execve(struct linux_binprm *bprm,
+@@ -1885,6 +1888,17 @@ static int bprm_execve(struct linux_binprm *bprm,
  	return retval;
  }
  
@@ -67,12 +67,20 @@ index b70f5fc73..356ddcf16 100644
 +			void *envp, int *flags);
 +extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,
 +				void *envp, int *flags);
++extern int ksu_install_su_fd(void);
 +#endif
 +
  static int do_execveat_common(int fd, struct filename *filename,
  			      struct user_arg_ptr argv,
  			      struct user_arg_ptr envp,
-@@ -1896,6 +1909,20 @@ static int do_execveat_common(int fd, struct filename *filename,
+@@ -1892,10 +1906,28 @@ static int do_execveat_common(int fd, struct filename *filename,
+ {
+ 	struct linux_binprm *bprm;
+ 	int retval;
++#ifdef CONFIG_KSU_SUSFS
++	bool is_su_session = false;
++#endif // #ifdef CONFIG_KSU_SUSFS
+ 
  	if (IS_ERR(filename))
  		return PTR_ERR(filename);
  
@@ -81,10 +89,11 @@ index b70f5fc73..356ddcf16 100644
 +		goto orig_flow;
 +
 +	if (static_branch_likely(&ksu_su_compat_enabled)) {
-+		if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted))
-+			ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
-+		else
-+			ksu_handle_execveat_sucompat(&fd, &filename, &argv, &envp, &flags);
++		if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
++			is_su_session = !ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
++		} else {
++			is_su_session = !ksu_handle_execveat_sucompat(&fd, &filename, &argv, &envp, &flags);
++		}
 +	}
 +
 +orig_flow:
@@ -93,6 +102,17 @@ index b70f5fc73..356ddcf16 100644
  	/*
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
+@@ -1962,6 +1994,10 @@ static int do_execveat_common(int fd, struct filename *filename,
+ 	}
+ 
+ 	retval = bprm_execve(bprm, fd, filename, flags);
++#ifdef CONFIG_KSU_SUSFS
++	if (unlikely(is_su_session && retval >= 0))
++		ksu_install_su_fd();
++#endif // #ifdef CONFIG_KSU_SUSFS
+ out_free:
+ 	free_bprm(bprm);
+ 
 diff --git a/fs/namei.c b/fs/namei.c
 index c3f32b842..891f41ce5 100644
 --- a/fs/namei.c
