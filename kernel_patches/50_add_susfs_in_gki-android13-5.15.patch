@@ -115,7 +115,7 @@ index b1b9db56a..d1ec7bfe0 100644
  	free_bprm(bprm);
  
 diff --git a/fs/namei.c b/fs/namei.c
-index ce97b60fe..f3def161d 100644
+index ce97b60fe..a082b7beb 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,10 +39,21 @@
@@ -556,7 +556,7 @@ index ce97b60fe..f3def161d 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index ff5e6455c..7900d1d52 100644
+index ff5e6455c..b591355d5 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -32,10 +32,20 @@
@@ -844,7 +844,7 @@ index ff5e6455c..7900d1d52 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -4669,3 +4885,43 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4669,3 +4884,43 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -1071,7 +1071,7 @@ index 39779f1ba..c3843d6f2 100644
  		goto out;
  
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 7624ae2c1..79f326d45 100644
+index 7624ae2c1..ec0438d8b 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -100,6 +100,10 @@
