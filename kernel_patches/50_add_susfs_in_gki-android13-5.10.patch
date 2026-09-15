@@ -113,7 +113,7 @@ index b64819a80..07f0ba00c 100644
  	free_bprm(bprm);
  
 diff --git a/fs/namei.c b/fs/namei.c
-index f630d4815..bd3b873e1 100644
+index f630d4815..effd0606c 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
@@ -430,7 +430,7 @@ index f630d4815..bd3b873e1 100644
  	if (unlikely(error))
  		return error;
  	error = mnt_want_write(path.mnt);
-@@ -3484,19 +3640,45 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
+@@ -3484,9 +3640,30 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
  
  static int do_o_path(struct nameidata *nd, unsigned flags, struct file *file)
  {
@@ -461,10 +461,7 @@ index f630d4815..bd3b873e1 100644
  		audit_inode(nd->name, path.dentry, 0);
  		error = vfs_open(&path, file);
  		path_put(&path);
- 	}
- 	return error;
- }
- 
+@@ -3497,6 +3674,11 @@ static int do_o_path(struct nameidata *nd, unsigned flags, struct file *file)
  static struct file *path_openat(struct nameidata *nd,
  			const struct open_flags *op, unsigned flags)
  {
@@ -558,7 +555,7 @@ index f630d4815..bd3b873e1 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 7981f78ea..74d0d2c8c 100644
+index 7981f78ea..1465d82fa 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -30,10 +30,21 @@
@@ -1071,7 +1068,7 @@ index ee284a930..ee125ea58 100644
  		goto out;
  
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index d0884f38c..56f9a0eb5 100644
+index d0884f38c..f2a083aa6 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -99,6 +99,9 @@
