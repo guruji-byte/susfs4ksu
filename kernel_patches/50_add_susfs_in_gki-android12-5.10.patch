@@ -113,7 +113,7 @@ index 16da4778c..2c95d13ec 100644
  	free_bprm(bprm);
  
 diff --git a/fs/namei.c b/fs/namei.c
-index 40e10b159..91abcbd2b 100644
+index 40e10b159..a28625c8e 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -39,6 +39,9 @@
@@ -439,7 +439,7 @@ index 40e10b159..91abcbd2b 100644
  	if (unlikely(error))
  		return error;
  	error = mnt_want_write(path.mnt);
-@@ -3484,19 +3648,45 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
+@@ -3484,9 +3648,30 @@ static int do_tmpfile(struct nameidata *nd, unsigned flags,
  
  static int do_o_path(struct nameidata *nd, unsigned flags, struct file *file)
  {
@@ -470,10 +470,7 @@ index 40e10b159..91abcbd2b 100644
  		audit_inode(nd->name, path.dentry, 0);
  		error = vfs_open(&path, file);
  		path_put(&path);
- 	}
- 	return error;
- }
- 
+@@ -3497,6 +3682,11 @@ static int do_o_path(struct nameidata *nd, unsigned flags, struct file *file)
  static struct file *path_openat(struct nameidata *nd,
  			const struct open_flags *op, unsigned flags)
  {
@@ -567,7 +564,7 @@ index 40e10b159..91abcbd2b 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 7981f78ea..08780444b 100644
+index 7981f78ea..aeed27dc7 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -30,10 +30,21 @@
@@ -855,7 +852,7 @@ index 7981f78ea..08780444b 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -4239,3 +4454,34 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4239,3 +4454,43 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -1082,7 +1079,7 @@ index ee284a930..ee125ea58 100644
  		goto out;
  
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index d0884f38c..3af2965f8 100644
+index d0884f38c..abe47e7a7 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -99,6 +99,10 @@
