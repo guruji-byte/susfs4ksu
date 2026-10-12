@@ -41,7 +41,7 @@ index 102e4cd2b..a1929dbc8 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/exec.c b/fs/exec.c
-index 28e8203de..5826b8670 100644
+index 28e8203de..7fa4caf80 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -64,6 +64,9 @@
@@ -54,14 +54,13 @@ index 28e8203de..5826b8670 100644
  
  #ifndef __GENKSYMS__
  #include <linux/dma-buf.h>
-@@ -1903,6 +1906,18 @@ static int bprm_execve(struct linux_binprm *bprm,
+@@ -1903,6 +1906,17 @@ static int bprm_execve(struct linux_binprm *bprm,
  	return retval;
  }
  
 +#ifdef CONFIG_KSU_SUSFS
 +extern struct static_key_true ksu_su_compat_enabled;
 +extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
-+extern bool __ksu_is_allow_uid_for_current(uid_t uid);
 +extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 +			void *envp, int *flags);
 +extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,
@@ -73,7 +72,7 @@ index 28e8203de..5826b8670 100644
  static int do_execveat_common(int fd, struct filename *filename,
  			      struct user_arg_ptr argv,
  			      struct user_arg_ptr envp,
-@@ -1910,10 +1925,28 @@ static int do_execveat_common(int fd, struct filename *filename,
+@@ -1910,10 +1924,28 @@ static int do_execveat_common(int fd, struct filename *filename,
  {
  	struct linux_binprm *bprm;
  	int retval;
@@ -102,7 +101,7 @@ index 28e8203de..5826b8670 100644
  	/*
  	 * We move the actual failure in case of RLIMIT_NPROC excess from
  	 * set*uid() to execve() because too many poorly written programs
-@@ -1980,6 +2013,10 @@ static int do_execveat_common(int fd, struct filename *filename,
+@@ -1980,6 +2012,10 @@ static int do_execveat_common(int fd, struct filename *filename,
  	}
  
  	retval = bprm_execve(bprm, fd, filename, flags);
