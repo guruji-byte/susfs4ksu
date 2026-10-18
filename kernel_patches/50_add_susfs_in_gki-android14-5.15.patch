@@ -42,7 +42,7 @@ index e4adb9882..2461d8986 100644
  obj-y +=	buffer.o direct-io.o mpage.o
  else
 diff --git a/fs/exec.c b/fs/exec.c
-index b70f5fc73..3596bd68e 100644
+index 253d89a0f..2375bb33d 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -65,6 +65,9 @@
@@ -555,7 +555,7 @@ index c3f32b842..b46ff36fb 100644
  	do_delayed_call(&done);
  	return res;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 885dfbea5..452099fa1 100644
+index 2d6d83f49..1a8125795 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -32,10 +32,20 @@
@@ -844,7 +844,7 @@ index 885dfbea5..452099fa1 100644
  	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
  	if (IS_ERR(new)) {
  		namespace_unlock();
-@@ -4678,3 +4893,43 @@ const struct proc_ns_operations mntns_operations = {
+@@ -4683,3 +4898,43 @@ const struct proc_ns_operations mntns_operations = {
  	.install	= mntns_install,
  	.owner		= mntns_owner,
  };
@@ -1010,7 +1010,7 @@ index 3451708fd..badf997c2 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index 8c1b653f0..959bbfdbe 100644
+index 921f042df..f377695b8 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -33,6 +33,9 @@
@@ -1071,7 +1071,7 @@ index 8c1b653f0..959bbfdbe 100644
  		goto out;
  
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index d72d8ac7c..2214f9002 100644
+index 889556a11..e4bba7416 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -100,6 +100,10 @@
@@ -1085,7 +1085,7 @@ index d72d8ac7c..2214f9002 100644
  #include <trace/events/oom.h>
  #include <trace/hooks/sched.h>
  #include "internal.h"
-@@ -1835,6 +1839,10 @@ static const char *proc_pid_get_link(struct dentry *dentry,
+@@ -1827,6 +1831,10 @@ static const char *proc_pid_get_link(struct dentry *dentry,
  	return ERR_PTR(error);
  }
  
@@ -1096,7 +1096,7 @@ index d72d8ac7c..2214f9002 100644
  static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  {
  	char *tmp = (char *)__get_free_page(GFP_KERNEL);
-@@ -1844,6 +1852,17 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
+@@ -1836,6 +1844,17 @@ static int do_proc_readlink(struct path *path, char __user *buffer, int buflen)
  	if (!tmp)
  		return -ENOMEM;
  
@@ -1114,7 +1114,7 @@ index d72d8ac7c..2214f9002 100644
  	pathname = d_path(path, tmp, PAGE_SIZE);
  	len = PTR_ERR(pathname);
  	if (IS_ERR(pathname))
-@@ -2463,6 +2482,10 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
+@@ -2445,6 +2464,10 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
  	for (vma = mm->mmap, pos = 2; vma; vma = vma->vm_next) {
  		if (!vma->vm_file)
  			continue;
@@ -1152,7 +1152,7 @@ index 2e244ada1..ca76c06d0 100644
  		seq_puts(m, saved_boot_config);
  	return 0;
 diff --git a/fs/proc/fd.c b/fs/proc/fd.c
-index 913bef0d2..39e63d028 100644
+index 277f77814..b03bcf0ad 100644
 --- a/fs/proc/fd.c
 +++ b/fs/proc/fd.c
 @@ -13,11 +13,22 @@
@@ -1605,7 +1605,7 @@ index 49650e54d..4499feb54 100644
  }
  
 diff --git a/fs/read_write.c b/fs/read_write.c
-index 3f6818620..10608b7d8 100644
+index 186187970..77ef2e7c4 100644
 --- a/fs/read_write.c
 +++ b/fs/read_write.c
 @@ -628,8 +628,18 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
@@ -2315,7 +2315,7 @@ index 4b2ebf822..a7c39feca 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/mm/memory.c b/mm/memory.c
-index edd7aa30f..90a333009 100644
+index 08a3213ba..50772f69c 100644
 --- a/mm/memory.c
 +++ b/mm/memory.c
 @@ -75,6 +75,9 @@
@@ -2328,7 +2328,7 @@ index edd7aa30f..90a333009 100644
  #include <trace/hooks/mm.h>
  
  #include <trace/events/kmem.h>
-@@ -5652,12 +5655,21 @@ int __access_remote_vm(struct mm_struct *mm, unsigned long addr, void *buf,
+@@ -5664,12 +5667,21 @@ int __access_remote_vm(struct mm_struct *mm, unsigned long addr, void *buf,
  	if (mmap_read_lock_killable(mm))
  		return 0;
  
@@ -2394,7 +2394,7 @@ index 2ee2c8a31..490280141 100644
  	audit_log_format(ab, " tclass=%s", tclass);
  
 diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index b719f1e1c..fce09d294 100644
+index a2abcff4b..9667f8f6c 100644
 --- a/security/selinux/hooks.c
 +++ b/security/selinux/hooks.c
 @@ -105,6 +105,10 @@
@@ -2408,7 +2408,7 @@ index b719f1e1c..fce09d294 100644
  
  /* SECMARK reference count */
  static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
-@@ -6548,6 +6552,11 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
+@@ -6549,6 +6553,11 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
  	u32 mysid = current_sid(), sid = 0, ptsid;
  	int error;
  	char *str = value;
@@ -2420,7 +2420,7 @@ index b719f1e1c..fce09d294 100644
  
  	/*
  	 * Basic control over ability to set these attributes at all.
-@@ -6583,6 +6592,15 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
+@@ -6584,6 +6593,15 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
  			str[size-1] = 0;
  			size--;
  		}
