@@ -1018,7 +1018,7 @@ index 765b50aea..1bd60bf21 100644
  			   inode_mark->wd, inode->i_ino, inode->i_sb->s_dev,
  			   inotify_mark_user_mask(mark));
 diff --git a/fs/open.c b/fs/open.c
-index ee284a930..ee125ea58 100644
+index 1438eb643..d873f76a6 100644
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -32,6 +32,9 @@
@@ -2464,7 +2464,7 @@ index 1de01fab5..1313b10a2 100644
  	if (copy_to_user(name, &tmp, sizeof(tmp)))
  		return -EFAULT;
 diff --git a/mm/memory.c b/mm/memory.c
-index c6627884c..39bac67b5 100644
+index 5c22fdd1d..f72c2953a 100644
 --- a/mm/memory.c
 +++ b/mm/memory.c
 @@ -74,6 +74,9 @@
@@ -2477,7 +2477,7 @@ index c6627884c..39bac67b5 100644
  #include <trace/hooks/mm.h>
  
  #include <trace/events/kmem.h>
-@@ -5656,12 +5659,21 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
+@@ -5665,12 +5668,21 @@ int __access_remote_vm(struct task_struct *tsk, struct mm_struct *mm,
  	if (mmap_read_lock_killable(mm))
  		return 0;
  
